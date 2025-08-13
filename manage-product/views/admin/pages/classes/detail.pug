@@ -1,0 +1,219 @@
+extends ../../layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Chi tiết lớp học
+    .btn-group
+      a.btn.btn-warning(href=`/admin/classes/edit/${classData._id}`) 
+        i.fas.fa-edit.me-2
+        | Chỉnh sửa
+      a.btn.btn-info(href=`/admin/classes/${classData._id}/students`) 
+        i.fas.fa-users.me-2
+        | Quản lý học viên
+      a.btn.btn-secondary(href="/admin/classes") 
+        i.fas.fa-arrow-left.me-2
+        | Quay lại
+
+  .row
+    .col-md-8
+      .card.mb-4
+        .card-header
+          h5.mb-0 Thông tin lớp học
+        .card-body
+          .row
+            .col-md-6
+              p
+                strong Mã lớp: 
+                span #{classData.class_name}
+              p
+                strong Khóa học: 
+                a(href=`/admin/courses/${classData.course_id._id}`) #{classData.course_id.title}
+              p
+                strong Giảng viên: 
+                span #{classData.instructor_id.fullName}
+              p
+                strong Sĩ số: 
+                span #{enrollmentCount}/#{classData.max_students}
+            .col-md-6
+              p
+                strong Ngày khai giảng: 
+                span #{classData.start_date ? new Date(classData.start_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+              p
+                strong Ngày kết thúc: 
+                span #{classData.end_date ? new Date(classData.end_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+              p
+                strong Trạng thái: 
+                if classData.status === "upcoming"
+                  span.badge.bg-warning 
+                    i.fas.fa-clock.me-1
+                    | Sắp khai giảng
+                else if classData.status === "ongoing"
+                  span.badge.bg-success 
+                    i.fas.fa-play.me-1
+                    | Đang diễn ra
+                else if classData.status === "completed"
+                  span.badge.bg-secondary 
+                    i.fas.fa-check.me-1
+                    | Đã kết thúc
+                else
+                  span.badge.bg-light #{classData.status}
+              p
+                strong Địa điểm: 
+                span #{classData.location || 'Chưa cập nhật'}
+
+          if classData.schedule && classData.schedule.length > 0
+            .mb-3
+              strong Lịch học:
+              each schedule, index in classData.schedule
+                - const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+                - const dayName = dayNames[schedule.day_of_week]
+                div.small.mb-1
+                  i.fas.fa-calendar-day.me-1
+                  | #{dayName}: #{schedule.start_time} - #{schedule.end_time}
+                  if schedule.room
+                    i.fas.fa-door-open.ms-1.me-1
+                    | #{schedule.room}
+          else
+            .mb-3
+              strong Lịch học:
+              span.text-muted Chưa có lịch học
+
+          if classData.description
+            .mb-3
+              strong Mô tả:
+              p #{classData.description}
+
+    .col-md-4
+      .card.mb-4
+        .card-header
+          h5.mb-0 Thống kê nhanh
+        .card-body
+          .row.text-center
+            .col-6
+              .border-end
+                h4.text-primary #{enrollmentCount}
+                small.text-muted Học viên đăng ký
+            .col-6
+              - const enrollmentRate = ((enrollmentCount / classData.max_students) * 100).toFixed(1)
+              h4.text-success #{enrollmentRate}%
+              small.text-muted Tỷ lệ đầy lớp
+
+      .card
+        .card-header
+          h5.mb-0 Hành động nhanh
+        .card-body
+          .d-grid.gap-2
+            a.btn.btn-outline-primary(href=`/admin/classes/${classData._id}/students`) 
+              i.fas.fa-users.me-2
+              | Xem danh sách học viên
+            a.btn.btn-outline-success(href=`/admin/attendance/take-attendance/${classData._id}`) 
+              i.fas.fa-clipboard-check.me-2
+              | Điểm danh
+            a.btn.btn-outline-info(href=`/admin/attendance/attendance-history/${classData._id}`) 
+              i.fas.fa-history.me-2
+              | Lịch sử điểm danh
+
+  if classData.instructor_history && classData.instructor_history.length > 0
+    .card.mt-4
+      .card-header
+        h5.mb-0 Lịch sử giảng viên
+      .card-body
+        .table-responsive
+          table.table.table-sm
+            thead
+              tr
+                th Giảng viên
+                th Ngày phân công
+                th Ngày thay đổi
+                th Lý do
+                th Người thực hiện
+            tbody
+              each history, index in classData.instructor_history
+                tr
+                  td 
+                    - const instructor = history.instructor_id
+                    | #{instructor ? instructor.fullName : 'Không xác định'}
+                  td #{history.assigned_date ? new Date(history.assigned_date).toLocaleDateString('vi-VN') : 'N/A'}
+                  td #{history.removed_date ? new Date(history.removed_date).toLocaleDateString('vi-VN') : 'Đang giảng dạy'}
+                  td #{history.reason || 'Không có'}
+                  td 
+                    - const assignedBy = history.assigned_by
+                    | #{assignedBy ? assignedBy.fullName : 'Hệ thống'}
+
+  // Recent enrollments
+  if recentEnrollments && recentEnrollments.length > 0
+    .card.mt-4
+      .card-header
+        h5.mb-0 Đăng ký gần đây
+      .card-body
+        .table-responsive
+          table.table.table-sm
+            thead
+              tr
+                th Học viên
+                th Email
+                th Ngày đăng ký
+                th Trạng thái
+                th Thao tác
+            tbody
+              each enrollment in recentEnrollments
+                tr
+                  td #{enrollment.student_id.fullName}
+                  td #{enrollment.student_id.email}
+                  td #{new Date(enrollment.createdAt).toLocaleDateString('vi-VN')}
+                  td
+                    if enrollment.status === "approved"
+                      span.badge.bg-success 
+                        i.fas.fa-check.me-1
+                        | Đã duyệt
+                    else if enrollment.status === "pending"
+                      span.badge.bg-warning 
+                        i.fas.fa-clock.me-1
+                        | Chờ duyệt
+                    else
+                      span.badge.bg-danger 
+                        i.fas.fa-times.me-1
+                        | Từ chối
+                  td
+                    a.btn.btn-sm.btn-outline-info(href=`/admin/enrollments/detail/${enrollment._id}`) 
+                      i.fas.fa-eye.me-1
+                      | Xem chi tiết
+
+  
+  .card.mt-4
+    .card-header.d-flex.justify-content-between.align-items-center
+      h5.mb-0 Danh sách bài học
+      a.btn.btn-sm.btn-primary(href=`/admin/classes/${classData._id}/lessons/manage`)
+        i.fas.fa-plus.me-1
+        | Quản lý bài học
+    .card-body
+      if classData.lessons && classData.lessons.length > 0
+        .table-responsive
+          table.table.table-bordered.table-hover
+            thead
+              tr
+                th STT
+                th Tên bài học
+                th Nội dung
+                th Video
+            tbody
+              each lesson, idx in classData.lessons
+                tr
+                  td #{idx + 1}
+                  td #{lesson.lesson_name}
+                  td #{lesson.content}
+                  td
+                    if lesson.video_url
+                      a(href=lesson.video_url target="_blank")
+                        i.fas.fa-play-circle.me-1
+                        | Xem video
+                    else
+                      span.text-muted Không có
+      else
+        p.text-muted Chưa có bài học nào. Nhấn "Quản lý bài học" để thêm mới.
+
+  script.
+    // Auto-refresh page every 30 seconds for real-time updates
+    setTimeout(function() {
+      window.location.reload();
+    }, 30000); 

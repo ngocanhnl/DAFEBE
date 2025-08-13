@@ -1,0 +1,100 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Quản lý bài học cho lớp: #{classData.class_name}
+  a.btn.btn-secondary.mb-3(href=`/admin/classes/detail/${classData._id}`)
+    i.fas.fa-arrow-left.me-1
+    | Quay lại chi tiết lớp học
+
+  // Danh sách bài học
+  .card.mb-4
+    .card-header.d-flex.justify-content-between.align-items-center
+      h5.mb-0 Danh sách bài học
+      button.btn.btn-sm.btn-primary#showAddLesson(type="button")
+        i.fas.fa-plus.me-1
+        | Thêm bài học
+    .card-body
+      // Form thêm bài học (ẩn/hiện bằng JS)
+      form#addLessonForm(action=`/admin/classes/${classData._id}/lessons/add` method="POST" style="display:none" class="mb-4 border rounded p-3 bg-light")
+        h5.mb-3 Thêm bài học mới
+        .mb-3
+          label.form-label(for="lesson_name") Tên bài học
+          input.form-control(type="text" name="lesson_name" required)
+        .mb-3
+          label.form-label(for="content") Nội dung
+          textarea.form-control(name="content" rows="3")
+        .mb-3
+          label.form-label(for="video_url") Link video
+          input.form-control(type="url" name="video_url")
+        .d-flex.gap-2
+          button.btn.btn-primary(type="submit") Thêm
+          button.btn.btn-secondary(type="button" id="cancelAddLesson") Hủy
+
+      if classData.lessons && classData.lessons.length > 0
+        .table-responsive
+          table.table.table-bordered.table-hover
+            thead
+              tr
+                th STT
+                th Tên bài học
+                th Nội dung
+                th Video
+                th Thao tác
+            tbody
+              each lesson, idx in classData.lessons
+                tr
+                  td #{idx + 1}
+                  td #{lesson.lesson_name}
+                  td #{lesson.content}
+                  td
+                    if lesson.video_url
+                      a(href=lesson.video_url target="_blank")
+                        i.fas.fa-play-circle.me-1
+                        | Xem video
+                    else
+                      span.text-muted Không có
+                  td
+                    button.btn.btn-sm.btn-warning(type="button" onclick=`showEditLesson(${idx})`)
+                      i.fas.fa-edit.me-1
+                      | Sửa
+                    form(action=`/admin/classes/${classData._id}/lessons/${idx}/delete` method="POST" style="display:inline-block")
+                      button.btn.btn-sm.btn-danger(type="submit" onclick="return confirm('Bạn có chắc muốn xóa bài học này?')")
+                        i.fas.fa-trash.me-1
+                        | Xóa
+                // Form sửa bài học (ẩn/hiện bằng JS)
+                tr(id=`editLessonRow${idx}` style="display:none")
+                  td(colspan="5")
+                    form(action=`/admin/classes/${classData._id}/lessons/${idx}/edit` method="POST" class="border rounded p-3 bg-light")
+                      h5.mb-3 Sửa bài học
+                      .mb-3
+                        label.form-label(for="lesson_name") Tên bài học
+                        input.form-control(type="text" name="lesson_name" required value=lesson.lesson_name)
+                      .mb-3
+                        label.form-label(for="content") Nội dung
+                        textarea.form-control(name="content" rows="3")= lesson.content
+                      .mb-3
+                        label.form-label(for="video_url") Link video
+                        input.form-control(type="url" name="video_url" value=lesson.video_url)
+                      .d-flex.gap-2
+                        button.btn.btn-primary(type="submit") Lưu
+                        button.btn.btn-secondary(type="button" onclick=`hideEditLesson(${idx})`) Hủy
+      else
+        p.text-muted Chưa có bài học nào
+
+  script.
+    // Show/hide form thêm bài học
+    document.getElementById('showAddLesson').onclick = function() {
+      document.getElementById('addLessonForm').style.display = 'block';
+      this.style.display = 'none';
+    };
+    document.getElementById('cancelAddLesson').onclick = function() {
+      document.getElementById('addLessonForm').style.display = 'none';
+      document.getElementById('showAddLesson').style.display = 'inline-block';
+    };
+    // Show/hide form sửa bài học
+    window.showEditLesson = function(idx) {
+      document.getElementById('editLessonRow' + idx).style.display = '';
+    };
+    window.hideEditLesson = function(idx) {
+      document.getElementById('editLessonRow' + idx).style.display = 'none';
+    };

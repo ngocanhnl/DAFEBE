@@ -1,0 +1,266 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Thống kê doanh thu
+
+  // Filter form
+  .card.mb-4
+    .card-header
+      h5.mb-0 Bộ lọc thống kê
+    .card-body
+      form(action="/admin/revenue" method="GET")
+        .row
+          .col-md-3
+            label.form-label Từ ngày
+            input.form-control(type="date" name="start_date" value=query.start_date)
+          .col-md-3
+            label.form-label Đến ngày
+            input.form-control(type="date" name="end_date" value=query.end_date)
+          .col-md-3
+            label.form-label Khóa học
+            select.form-select(name="course_id")
+              option(value="") Tất cả khóa học
+              each course in courses
+                option(value=course._id selected=query.course_id == course._id.toString()) #{course.title}
+          .col-md-3
+            label.form-label Giảng viên
+            select.form-select(name="instructor_id")
+              option(value="") Tất cả giảng viên
+              each instructor in instructors
+                option(value=instructor._id selected=query.instructor_id == instructor._id.toString()) #{instructor.fullName}
+        .row.mt-3
+          .col-md-3
+            label.form-label Lớp học
+            select.form-select(name="class_id")
+              option(value="") Tất cả lớp
+              if classes
+                each cls in classes
+                  option(value=cls._id selected=query.class_id == cls._id.toString()) #{cls.class_name}
+          .col-md-3
+            label.form-label Học viên
+            select.form-select(name="student_id")
+              option(value="") Tất cả học viên
+              if students
+                each st in students
+                  option(value=st._id selected=query.student_id == st._id.toString()) #{st.fullName}
+          .col-md-3
+            label.form-label Phương thức thanh toán
+            select.form-select(name="payment_method")
+              option(value="") Tất cả phương thức
+              if paymentMethods
+                each pm in paymentMethods
+                  option(value=pm selected=query.payment_method == pm) #{pm}
+          .col-md-3
+            label.form-label Trạng thái
+            select.form-select(name="status")
+              option(value="") Tất cả trạng thái
+              option(value="pending" selected=query.status === 'pending') Chờ xử lý
+              option(value="completed" selected=query.status === 'completed') Hoàn tất
+              option(value="refunded" selected=query.status === 'refunded') Hoàn tiền
+              option(value="cancelled" selected=query.status === 'cancelled') Hủy
+        
+        .row.mt-3
+          .col-md-3
+            label.form-label Loại thống kê
+            select.form-select(name="group_by")
+              option(value="daily" selected=query.group_by === "daily") Theo ngày
+              option(value="monthly" selected=query.group_by === "monthly") Theo tháng
+              option(value="yearly" selected=query.group_by === "yearly") Theo năm
+              option(value="course" selected=query.group_by === "course") Theo khóa học
+              option(value="instructor" selected=query.group_by === "instructor") Theo giảng viên
+              option(value="class" selected=query.group_by === "class") Theo lớp học
+              option(value="payment_method" selected=query.group_by === "payment_method") Theo phương thức thanh toán
+              option(value="status" selected=query.group_by === "status") Theo trạng thái
+          .col-md-3
+            label.form-label &nbsp;
+            button.btn.btn-primary.w-100(type="submit") 
+              i.fas.fa-search.me-2
+              | Thống kê
+          .col-md-3
+            label.form-label &nbsp;
+            a.btn.btn-success.w-100(href=`/admin/revenue/export?${new URLSearchParams(query).toString()}`) 
+              i.fas.fa-download.me-2
+              | Xuất Excel
+          .col-md-3
+            label.form-label &nbsp;
+            a.btn.btn-outline-secondary.w-100(href="/admin/revenue") Làm mới
+
+  // Summary cards
+  if summary
+    .row.mb-4
+      .col-md-3
+        .card.bg-primary.text-white
+          .card-body.text-center
+            h4 #{summary.total_revenue.toLocaleString('vi-VN')}đ
+            small Tổng doanh thu
+      .col-md-3
+        .card.bg-success.text-white
+          .card-body.text-center
+            h4 #{summary.total_enrollments}
+            small Tổng đăng ký
+      .col-md-3
+        .card.bg-info.text-white
+          .card-body.text-center
+            h4 #{summary.avg_revenue_per_enrollment.toLocaleString('vi-VN')}đ
+            small Doanh thu TB/đăng ký
+      .col-md-3
+        .card.bg-warning.text-white
+          .card-body.text-center
+            h4 #{summary.total_courses}
+            small Số khóa học
+
+  // Revenue chart
+  if chartData
+    .card.mb-4
+      .card-header
+        h5.mb-0 Biểu đồ doanh thu
+      .card-body
+        canvas#revenueChart(width="400" height="200")
+
+  // Revenue table
+  .card
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Chi tiết doanh thu
+        .btn-group
+          button.btn.btn-outline-secondary#prev-page(type="button") Trước
+          button.btn.btn-outline-secondary#next-page(type="button") Sau
+
+    .card-body
+      .table-responsive
+        table.table.table-striped
+          thead
+            tr
+              if query.group_by === "daily"
+                th Ngày
+              else if query.group_by === "monthly"
+                th Tháng
+              else if query.group_by === "yearly"
+                th Năm
+              else if query.group_by === "course"
+                th Khóa học
+              else if query.group_by === "instructor"
+                th Giảng viên
+              else if query.group_by === "class"
+                th Lớp học
+              else if query.group_by === "payment_method"
+                th Phương thức thanh toán
+              else if query.group_by === "status"
+                th Trạng thái
+              th Số đăng ký
+              th Doanh thu
+              th Doanh thu TB
+              th Chi tiết
+          tbody
+            each item in revenueData
+              tr
+                td
+                  if query.group_by === "daily"
+                    | #{new Date(item._id).toLocaleDateString('vi-VN')}
+                  else if query.group_by === "monthly"
+                    | #{item._id}
+                  else if query.group_by === "yearly"
+                    | #{item._id}
+                  else
+                    | #{item._id}
+                td #{item.enrollment_count}
+                td #{item.total_revenue.toLocaleString('vi-VN')}đ
+                td #{item.avg_revenue.toLocaleString('vi-VN')}đ
+                td
+                  a.btn.btn-sm.btn-outline-primary(href=`/admin/revenue/detail?${new URLSearchParams({...query, group_value: item._id}).toString()}`) Xem chi tiết
+
+      // Pagination
+      if pagination
+        include ../../mixins/pagination
+        +pagination(pagination)
+
+  // Top performing courses/instructors
+  if topPerformers
+    .row.mt-4
+      .col-md-6
+        .card
+          .card-header
+            h5.mb-0 Khóa học bán chạy nhất
+          .card-body
+            .list-group.list-group-flush
+              each course, index in topPerformers.courses
+                .list-group-item.d-flex.justify-content-between.align-items-center
+                  div
+                    strong #{index + 1}. #{course.title}
+                    br
+                    small.text-muted #{course.enrollment_count} đăng ký
+                  span.badge.bg-primary.rounded-pill #{course.revenue.toLocaleString('vi-VN')}đ
+
+      .col-md-6
+        .card
+          .card-header
+            h5.mb-0 Giảng viên xuất sắc nhất
+          .card-body
+            .list-group.list-group-flush
+              each instructor, index in topPerformers.instructors
+                .list-group-item.d-flex.justify-content-between.align-items-center
+                  div
+                    strong #{index + 1}. #{instructor.name}
+                    br
+                    small.text-muted #{instructor.class_count} lớp học
+                  span.badge.bg-success.rounded-pill #{instructor.revenue.toLocaleString('vi-VN')}đ
+
+
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script.
+    // Revenue chart
+    if (document.getElementById('revenueChart')) {
+      const ctx = document.getElementById('revenueChart').getContext('2d');
+      const chartData = !{JSON.stringify(chartData)};
+      
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Doanh thu',
+            data: chartData.data,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString('vi-VN') + 'đ';
+                }
+              }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return 'Doanh thu: ' + context.parsed.y.toLocaleString('vi-VN') + 'đ';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Pagination
+    document.getElementById('prev-page').addEventListener('click', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentPage = parseInt(urlParams.get('page') || 1);
+      urlParams.set('page', currentPage - 1);
+      window.location.search = urlParams.toString();
+    });
+
+    document.getElementById('next-page').addEventListener('click', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentPage = parseInt(urlParams.get('page') || 1);
+      urlParams.set('page', currentPage + 1);
+      window.location.search = urlParams.toString();
+    }); 

@@ -1,0 +1,146 @@
+extends ../../layouts/default.pug
+include ../../mixins/filter-Status.pug
+include ../../mixins/pagination.pug
+include ../../mixins/change-multi.pug
+include ../../mixins/alert.pug
+include ../../mixins/sort.pug
+include ../../mixins/moment.pug
+
+
+
+block main
+  +alert-success(3000)
+  +alert-error(3000)
+  h1(class="mb-4") Danh sách khóa học
+  .card.mb-3
+    .card-header Bộ lọc và Tìm kiếm
+    .card-body
+      .row  
+        .col-6
+          +filter-Status(filterStatus)
+        .col-6
+          form(id="form-search")
+            .input-group
+              input(
+                type="text"
+                placeholder="Nhập từ khóa"
+                name="keyword"
+                class="form-control"
+                value=keyword
+              )
+              .input-group-append
+                button(
+                  class="btn btn-success"
+                  type="submit"
+                ) Tìm
+  .card.mb-3
+    .card-header Sắp xếp
+    .card-body
+      .row
+        .col-4
+          +sort()
+  .card.mb-3
+    .card-header Danh sách
+    .card-body
+      .row  
+        .col-8
+          +change-multi(`/${prefixAdmin}/courses/change-multi?_method=PATCH`)
+        .col-4
+          a(
+            href=`/${prefixAdmin}/courses/create`
+            class="btn btn-outline-success"
+          ) + Thêm mới
+      table(
+        class="table table-hover table-sm"
+        checkbox-multi
+      )
+        thead
+          tr
+            th 
+              input(type="checkbox" name="checkall")
+            th STT
+            th Hình ảnh
+            th Tiêu đề
+            th Giảng viên
+            th Giá
+            th Thời lượng
+            th Cấp độ
+            th Vị trí
+            th Trạng thái
+            th Người tạo
+            th Hành động
+
+        tbody
+          each item, index in courses
+            tr
+              td 
+                input(type="checkbox" name="id" value=item.id)
+              td #{pagination.limitItem*(pagination.currentPage-1)+(index+1)}
+              td
+                img(
+                  src=item.thumbnail
+                  alt=item.title
+                  width="100px"
+                  height="auto"
+                )
+              td #{item.title}
+              td #{item.instructor}
+              td #{item.price}đ
+              td #{item.duration} phút
+              td #{item.level}
+              td 
+                input(
+                    type="number"
+                    value=item.position
+                    style="width: 60px"
+                    min="1"
+                    name="position"
+                  )
+              td
+                if(item.status == "active")
+                  button(
+                    class="badge badge-success"
+                    button-change-status 
+                    data-status = item.status 
+                    data-id = item.id
+                  ) Hoạt động
+                else
+                  button(
+                    class="badge badge-danger"
+                    button-change-status 
+                    data-status = item.status 
+                    data-id = item.id
+                  ) Dừng hoạt động
+              td 
+                if(item.createdBy.accountFullName)
+                    div #{item.createdBy.accountFullName}
+                    div
+                      +formatDate(item.createdBy.createdAt)
+              td
+                a(
+                    href=`/${prefixAdmin}/courses/detail/${item.id}`
+                    class="btn btn-secondary btn-sm"
+                  ) Chi tiết
+                a(
+                    href=`/${prefixAdmin}/courses/edit/${item.id}`
+                    class="btn btn-warning btn-sm"
+                ) Sửa
+                button(
+                  class="btn btn-danger btn-sm ml-1"
+                  delete-button
+                  data-id = item.id
+                ) Xóa
+  form(
+    id="form-change-status"
+    method="POST"
+    action=""
+		data-path=`/${prefixAdmin}/courses/change-status`
+    )
+  form(
+    id="form-delete-item"
+    method="POST"
+    action=""
+		data-path=`/${prefixAdmin}/courses/delete`
+  )
+     
+  +pagination(pagination) 

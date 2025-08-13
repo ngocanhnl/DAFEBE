@@ -1,0 +1,58 @@
+extends ../../layouts/default.pug
+
+block main
+
+  if (course.title)
+    h1(class="mb-4") #{course.title}
+
+  if (course.instructor)
+    div(class="mb-4") Giảng viên: <b>#{course.instructor}</b>
+
+  if (course.level)
+    div(class="mb-4") Cấp độ: <b>#{course.level}</b>
+
+  if (course.language)
+    div(class="mb-4") Ngôn ngữ: <b>#{course.language}</b>
+
+  if (course.duration)
+    div(class="mb-4") Thời lượng: <b>#{course.duration} phút</b>
+
+  if (course.price)
+    div(class="mb-4") Giá: <b>#{course.price}đ</b>
+
+  if (course.discountPercentage)
+    div(class="mb-4") Giảm giá: <b>#{course.discountPercentage}%</b>
+
+  if (course.video_intro)
+    div(class="mb-4") 
+      span Video giới thiệu: 
+      a(href=course.video_intro target="_blank") Xem video
+
+  if (course.thumbnail)
+    div(class="mb-4")
+      img(
+        src=course.thumbnail
+        style="width: 200px"
+        alt=course.title
+      )
+
+  if (course.status)
+    div(class="mb-4")
+      span Trạng thái:
+      if (course.status === "active")
+        span(class="badge badge-success") Hoạt động
+      else
+        span(class="badge badge-danger") Dừng hoạt động
+
+  if (course.position)
+    div(class="mb-4") Vị trí: <b>#{course.position}</b>
+
+  if (course.description)
+    div(class="mb-4")
+      h4 Mô tả:
+      div !{course.description}
+
+  if (course.content)
+    div(class="mb-4")
+      h4 Nội dung khóa học:
+      div !{course.content} 

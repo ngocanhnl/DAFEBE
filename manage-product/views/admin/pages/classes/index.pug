@@ -1,0 +1,196 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Quản lý lớp học
+
+  // Statistics cards
+  .row.mb-4
+    .col-md-3
+      .card.bg-primary.text-white
+        .card-body
+          .d-flex.justify-content-between
+            div
+              h4.mb-0 #{classes ? classes.length : 0}
+              small Tổng lớp học
+            i.fas.fa-graduation-cap.fa-2x
+    .col-md-3
+      .card.bg-success.text-white
+        .card-body
+          .d-flex.justify-content-between
+            div
+              h4.mb-0 #{classes ? classes.filter(c => c.status === 'ongoing').length : 0}
+              small Đang diễn ra
+            i.fas.fa-play.fa-2x
+    .col-md-3
+      .card.bg-warning.text-white
+        .card-body
+          .d-flex.justify-content-between
+            div
+              h4.mb-0 #{classes ? classes.filter(c => c.status === 'upcoming').length : 0}
+              small Sắp khai giảng
+            i.fas.fa-clock.fa-2x
+    .col-md-3
+      .card.bg-secondary.text-white
+        .card-body
+          .d-flex.justify-content-between
+            div
+              h4.mb-0 #{classes ? classes.filter(c => c.status === 'completed').length : 0}
+              small Đã kết thúc
+            i.fas.fa-check.fa-2x
+
+  .card
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Danh sách lớp học
+        a.btn.btn-primary(href="/admin/classes/create") 
+          i.fas.fa-plus.me-2
+          | Thêm lớp học mới
+
+    .card-body
+      // Filter form
+      form.mb-4(action="/admin/classes" method="GET")
+        .row
+          .col-md-3
+            label.form-label Khóa học
+            select.form-select(name="course_id")
+              option(value="") Tất cả khóa học
+              if courses
+                each course in courses
+                  option(
+                    value=course._id 
+                    selected=(query && query.course_id == course._id.toString())
+                  ) #{course.title}
+
+          .col-md-3
+            label.form-label Trạng thái
+            select.form-select(name="status")
+              option(value="") Tất cả trạng thái
+              option(value="upcoming" selected=(query && query.status === "upcoming")) Sắp khai giảng
+              option(value="ongoing" selected=(query && query.status === "ongoing")) Đang diễn ra
+              option(value="completed" selected=(query && query.status === "completed")) Đã kết thúc
+
+          .col-md-3
+            label.form-label &nbsp;
+            button.btn.btn-secondary.w-100(type="submit") Lọc
+
+      // Classes table
+      .table-responsive
+        table.table.table-striped.table-hover
+          thead.table-dark
+            tr
+              th Mã lớp
+              th Tên khóa học
+              th Giảng viên
+              th Lịch học
+              th Thời gian
+              th Sĩ số
+              th Trạng thái
+              th Thao tác
+          tbody
+            if classes
+              each classItem in classes
+                tr
+                  td 
+                    strong 
+                      i.fas.fa-graduation-cap.me-1
+                      | #{classItem.class_name}
+                  td 
+                    a(href=`/admin/courses/${classItem.course_id._id}`) 
+                      i.fas.fa-book.me-1
+                      | #{classItem.course_id.title}
+                  td 
+                    i.fas.fa-user-tie.me-1
+                    | #{classItem.instructor_id.fullName}
+                  td 
+                    if classItem.schedule && classItem.schedule.length > 0
+                      each schedule, index in classItem.schedule
+                        div.small
+                          - const dayNames = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7']
+                          - const dayName = dayNames[schedule.day_of_week]
+                          i.fas.fa-calendar-day.me-1
+                          | #{dayName}: #{schedule.start_time} - #{schedule.end_time}
+                          if schedule.room
+                            i.fas.fa-door-open.ms-1.me-1
+                            | #{schedule.room}
+                          if index < classItem.schedule.length - 1
+                            hr.my-1
+                    else
+                      span.text-muted 
+                        i.fas.fa-calendar-times.me-1
+                        | Chưa có lịch học
+                  td 
+                    if classItem.start_date && classItem.end_date
+                      - const startDate = new Date(classItem.start_date).toLocaleDateString('vi-VN')
+                      - const endDate = new Date(classItem.end_date).toLocaleDateString('vi-VN')
+                      div.small 
+                        i.fas.fa-calendar-alt.me-1
+                        | #{startDate} - #{endDate}
+                    else
+                      span.text-muted 
+                        i.fas.fa-calendar-times.me-1
+                        | Chưa có thông tin
+                  td 
+                    - const enrollmentRate = ((classItem.current_students || 0) / classItem.max_students * 100).toFixed(1)
+                    - const badgeClass = enrollmentRate >= 80 ? 'bg-success' : enrollmentRate >= 50 ? 'bg-warning' : 'bg-info'
+                    span.badge(class=badgeClass) #{classItem.current_students || 0}/#{classItem.max_students}
+                    div.small.text-muted #{enrollmentRate}% đầy
+                  td
+                    if classItem.status === "upcoming"
+                      span.badge.bg-warning 
+                        i.fas.fa-clock.me-1
+                        | Sắp khai giảng
+                    else if classItem.status === "ongoing"
+                      span.badge.bg-success 
+                        i.fas.fa-play.me-1
+                        | Đang diễn ra
+                    else if classItem.status === "completed"
+                      span.badge.bg-secondary 
+                        i.fas.fa-check.me-1
+                        | Đã kết thúc
+                    else
+                      span.badge.bg-light 
+                        i.fas.fa-question.me-1
+                        | #{classItem.status}
+                  td
+                    .btn-group
+                      a.btn.btn-sm.btn-outline-primary(href=`/admin/classes/detail/${classItem._id}` title="Xem chi tiết")
+                        i.fas.fa-eye
+                      a.btn.btn-sm.btn-outline-warning(href=`/admin/classes/edit/${classItem._id}` title="Chỉnh sửa")
+                        i.fas.fa-edit
+                      a.btn.btn-sm.btn-outline-info(href=`/admin/classes/${classItem._id}/students` title="Danh sách học viên")
+                        i.fas.fa-users
+                      button.btn.btn-sm.btn-outline-danger(
+                        onclick=`deleteClass('${classItem._id}')` 
+                        title="Xóa lớp học"
+                      )
+                        i.fas.fa-trash
+            else
+              tr
+                td(colspan="8").text-center Không có lớp học nào
+
+      // Pagination
+      if pagination
+        include ../../mixins/pagination
+        +pagination(pagination)
+
+  script.
+    // Handle delete confirmation
+    function deleteClass(classId) {
+      if (confirm('Bạn có chắc muốn xóa lớp học này?')) {
+        fetch(`/admin/classes/delete/${classId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }).then(response => {
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert('Có lỗi xảy ra khi xóa lớp học');
+          }
+        }).catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi xóa lớp học');
+        });
+      }
+    }

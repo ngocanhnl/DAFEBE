@@ -1,0 +1,198 @@
+extends ../../layouts/default.pug
+include ../../mixins/alert.pug
+include ../../mixins/selectTree.pug
+block main
+  +alert-success(5000)
+  +alert-error(5000)
+  if(role.permission.includes("courses_edit"))
+    h1(class="mb-4") Chỉnh sửa khóa học
+
+
+    form(
+      action=`/${prefixAdmin}/courses/edit/${course.id}?_method=PATCH`
+      method="POST"
+      enctype="multipart/form-data"
+    )
+      div(class="form-group")
+        label(for="title") Tên khóa học
+        input(
+          type="text"
+          class="form-control"
+          id="title"
+          name="title"
+          required
+          value=course.title
+        )
+      div(class="form-group")
+        label(for="course_category_id") Danh mục khóa học
+        select(
+          name="course_category_id"
+          id="course_category_id"
+          class="form-control"
+        )
+          option(value="") -- Chọn danh mục khóa học --
+            +selectTree(records,1,course.course_category_id)
+
+      div(class="form-group")
+        label(for="instructor") Giảng viên
+        input(
+          type="text"
+          class="form-control"
+          id="instructor"
+          name="instructor"
+          required
+          value=course.instructor
+        )
+      div(class="form-group")
+        label(for="level") Cấp độ
+        select(
+          name="level"
+          id="level"
+          class="form-control"
+        )
+          option(value="") -- Chọn cấp độ --
+          option(value="Beginner" selected=(course.level === "Beginner")) Người mới bắt đầu
+          option(value="Intermediate" selected=(course.level === "Intermediate")) Trung cấp
+          option(value="Advanced" selected=(course.level === "Advanced")) Nâng cao
+
+      div(class="form-group")
+        label(for="language") Ngôn ngữ giảng dạy
+        input(
+          type="text"
+          class="form-control"
+          id="language"
+          name="language"
+          value=course.language || "Tiếng Việt"
+        )
+      div(class="form-group")
+        label(for="duration") Thời lượng (phút)
+        input(
+          type="number"
+          class="form-control"
+          id="duration"
+          name="duration"
+          value=course.duration
+          min="0"
+          required
+        )
+      div(class="form-group form-check form-check-inline")
+        input(
+          type="radio"
+          class="form-check-input"
+          id="featured1"
+          name="featured"
+          value="1"
+          checked=(course.featured === "1" ? true : false)
+        )
+        label(for="featured1" class="form-check-label") Nổi bật
+      div(class="form-group form-check form-check-inline")
+        input(
+          type="radio"
+          class="form-check-input"
+          id="featured0"
+          name="featured"
+          value="0"
+          checked=(course.featured !== "1" ? true : false)
+        )
+        label(for="featured0" class="form-check-label") Không
+      div(class="form-group")
+        label(for="desc") Mô tả
+        textarea(
+          class="form-control textarea-mce"
+          id="desc"
+          name="description"
+          rows="5"
+        ) #{course.description}
+      div(class="form-group")
+        label(for="content") Nội dung khóa học
+        textarea(
+          class="form-control textarea-mce"
+          id="content"
+          name="content"
+          rows="10"
+        ) #{course.content}
+      div(class="form-group")
+        label(for="price") Giá (VNĐ)
+        input(
+          type="number"
+          class="form-control"
+          id="price"
+          name="price"
+          value=course.price
+          min="0"
+          required
+        )
+      div(class="form-group")
+        label(for="discount") % Giảm giá
+        input(
+          type="number"
+          class="form-control"
+          id="discount"
+          name="discountPercentage"
+          value=course.discountPercentage
+          min="0"
+        )
+      div(class="form-group")
+        label(for="video_intro") Link video giới thiệu
+        input(
+          type="text"
+          class="form-control"
+          id="video_intro"
+          name="video_intro"
+          value=course.video_intro
+          placeholder="https://www.youtube.com/watch?v=..."
+        )
+      div(
+        class="form-group"
+        upload-image
+      )
+        label(for="thumbnail") Ảnh đại diện
+        input(
+          type="file"
+          class="form-control-file"
+          id="thumbnail"
+          name="thumbnail"
+          accept="image/*"
+          upload-image-input
+        )
+        img(
+          src=course.thumbnail
+          class="image-preview"
+          upload-image-preview
+        )
+      div(class="form-group")
+        label(for="position") Vị trí
+        input(
+          type="number"
+          class="form-control"
+          id="position"
+          name="position"
+          placeholder="Tự động tăng"
+          min="1"
+          value=course.position
+        )
+      div(class="form-group form-check form-check-inline")
+        input(
+          type="radio"
+          class="form-check-input"
+          id="statusActive"
+          name="status"
+          value="active"
+          checked=(course.status == "active" ? true : false)
+        )
+        label(for="statusActive" class="form-check-label") Hoạt động
+      div(class="form-group form-check form-check-inline")
+        input(
+          type="radio"
+          class="form-check-input"
+          id="statusInActive"
+          name="status"
+          value="inactive"
+          checked=(course.status == "inactive" ? true : false)
+        )
+        label(for="statusInActive" class="form-check-label") Dừng hoạt động
+      div(class="form-group")
+        button(
+          type="submit"
+          class="btn btn-primary"
+        ) Cập nhật 

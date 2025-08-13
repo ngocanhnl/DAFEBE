@@ -1,0 +1,279 @@
+extends ../../layouts/default
+
+block main
+  style.
+    .form-select[size] {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .form-text {
+      font-size: 0.875rem;
+      color: #6c757d;
+    }
+    .card {
+      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .btn-group .btn {
+      margin-right: 0.5rem;
+    }
+    .btn-group .btn:last-child {
+      margin-right: 0;
+    }
+  h1.mb-4 Thêm mới đăng ký học
+
+  .card
+    .card-header
+      h5.mb-0 Thông tin đăng ký
+    .card-body
+      form(action="/admin/enrollments/create" method="POST")
+        .row
+          .col-md-6
+            .mb-3
+              label.form-label(for="student_search") Tìm kiếm học viên
+              input.form-control#student_search(type="text" placeholder="Nhập tên hoặc email học viên...")
+              small.form-text.text-muted Tìm kiếm theo tên hoặc email học viên
+            
+            .mb-3
+              label.form-label(for="student_id") Học viên *
+              select.form-select#student_id(name="student_id" required size="8")
+                option(value="") Chọn học viên
+                each student in students
+                  option(value=student._id data-name=student.fullName.toLowerCase() data-email=student.email.toLowerCase()) 
+                    | #{student.fullName} - #{student.email} (#{student.role_id || 'Chưa phân quyền'})
+            
+            .mb-3
+              label.form-label(for="class_search") Tìm kiếm lớp học
+              input.form-control#class_search(type="text" placeholder="Nhập tên hoặc mã lớp học...")
+              small.form-text.text-muted Tìm kiếm theo tên lớp hoặc mã lớp học
+            
+            .mb-3
+              label.form-label(for="class_id") Lớp học *
+              select.form-select#class_id(name="class_id" required size="8")
+                option(value="") Chọn lớp học
+                each classItem in classes
+                  option(value=classItem._id data-course-id=classItem.course_id._id data-price=classItem.price data-class-name=(classItem.class_name || '').toLowerCase() data-class-code=(classItem.class_code || '').toLowerCase()) 
+                    | #{classItem.class_name || classItem.class_code} - #{classItem.course_id.title}
+          
+          .col-md-6
+            .mb-3
+              label.form-label(for="amount_paid") Số tiền đã thanh toán
+              input.form-control#amount_paid(type="number" name="amount_paid" placeholder="Nhập số tiền")
+            
+            .mb-3
+              label.form-label(for="payment_status") Trạng thái thanh toán
+              select.form-select#payment_status(name="payment_status")
+                option(value="paid") Đã thanh toán
+                option(value="pending") Chờ thanh toán
+                option(value="refunded") Hoàn tiền
+            
+            .mb-3
+              label.form-label(for="status") Trạng thái đăng ký
+              select.form-select#status(name="status")
+                option(value="approved") Đã duyệt
+                option(value="pending") Chờ duyệt
+                option(value="rejected") Từ chối
+
+        .d-flex.justify-content-end.gap-2
+          a.btn.btn-secondary(href="/admin/enrollments") 
+            i.fas.fa-times.me-2
+            | Hủy
+          button.btn.btn-primary(type="submit") 
+            i.fas.fa-save.me-2
+            | Thêm mới
+
+  // Class Information Card
+  .card.mt-4#class-info-card(style="display: none;")
+    .card-header
+      h5.mb-0 Thông tin lớp học
+    .card-body
+      .row
+        .col-md-6
+          p
+            strong Tên lớp: 
+            span#class-name
+          p
+            strong Khóa học: 
+            span#course-title
+          p
+            strong Giảng viên: 
+            span#instructor-name
+        .col-md-6
+          p
+            strong Học phí: 
+            span#class-price
+          p
+            strong Số học viên hiện tại: 
+            span#current-students
+          p
+            strong Số chỗ còn lại: 
+            span#available-slots
+
+  script.
+    // Student search functionality
+    document.getElementById('student_search').addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const studentSelect = document.getElementById('student_id');
+      const options = studentSelect.querySelectorAll('option');
+      let visibleCount = 0;
+      
+      options.forEach(option => {
+        if (option.value === '') return; // Skip the placeholder option
+        
+        const name = option.dataset.name || '';
+        const email = option.dataset.email || '';
+        const displayText = option.textContent.toLowerCase();
+        
+        if (name.includes(searchTerm) || email.includes(searchTerm) || displayText.includes(searchTerm)) {
+          option.style.display = '';
+          visibleCount++;
+        } else {
+          option.style.display = 'none';
+        }
+      });
+      
+      // Show/hide placeholder based on search results
+      const placeholder = studentSelect.querySelector('option[value=""]');
+      if (placeholder) {
+        if (searchTerm === '') {
+          placeholder.style.display = '';
+        } else {
+          placeholder.style.display = 'none';
+        }
+      }
+    });
+
+    // Class search functionality
+    document.getElementById('class_search').addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const classSelect = document.getElementById('class_id');
+      const options = classSelect.querySelectorAll('option');
+      let visibleCount = 0;
+      
+      options.forEach(option => {
+        if (option.value === '') return; // Skip the placeholder option
+        
+        const className = option.dataset.className || '';
+        const classCode = option.dataset.classCode || '';
+        const displayText = option.textContent.toLowerCase();
+        
+        if (className.includes(searchTerm) || classCode.includes(searchTerm) || displayText.includes(searchTerm)) {
+          option.style.display = '';
+          visibleCount++;
+        } else {
+          option.style.display = 'none';
+        }
+      });
+      
+      // Show/hide placeholder based on search results
+      const placeholder = classSelect.querySelector('option[value=""]');
+      if (placeholder) {
+        if (searchTerm === '') {
+          placeholder.style.display = '';
+        } else {
+          placeholder.style.display = 'none';
+        }
+      }
+    });
+
+    // Auto-fill price when class is selected
+    document.getElementById('class_id').addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const price = selectedOption.dataset.price;
+      const classId = this.value;
+      
+      if (price) {
+        document.getElementById('amount_paid').value = price;
+      }
+      
+      // Load class information
+      if (classId) {
+        loadClassInfo(classId);
+        checkExistingEnrollment();
+      } else {
+        document.getElementById('class-info-card').style.display = 'none';
+      }
+    });
+
+    // Check for existing enrollment when both student and class are selected
+    function checkExistingEnrollment() {
+      const studentId = document.getElementById('student_id').value;
+      const classId = document.getElementById('class_id').value;
+      
+      if (studentId && classId) {
+        fetch(`/admin/enrollments/check-enrollment?student_id=${studentId}&class_id=${classId}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success && data.exists) {
+              const enrollment = data.enrollment;
+              const statusText = enrollment.status === 'approved' ? 'Đã duyệt' : 
+                               enrollment.status === 'pending' ? 'Chờ duyệt' : 'Từ chối';
+              alert(`Học viên đã đăng ký lớp học này với trạng thái: ${statusText}`);
+            }
+          })
+          .catch(error => {
+            console.error('Error checking enrollment:', error);
+          });
+      }
+    }
+
+    // Check enrollment when student is selected
+    document.getElementById('student_id').addEventListener('change', function() {
+      checkExistingEnrollment();
+    });
+
+    // Load class information via AJAX
+    function loadClassInfo(classId) {
+      fetch(`/admin/enrollments/class-info/${classId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById('class-name').textContent = data.data.class_name;
+            document.getElementById('course-title').textContent = data.data.course_title;
+            document.getElementById('instructor-name').textContent = data.data.instructor_name;
+            document.getElementById('class-price').textContent = new Intl.NumberFormat('vi-VN').format(data.data.price) + ' VNĐ';
+            document.getElementById('current-students').textContent = data.data.current_students + '/' + data.data.max_students;
+            document.getElementById('available-slots').textContent = data.data.available_slots;
+            
+            // Show/hide card based on available slots
+            const card = document.getElementById('class-info-card');
+            card.style.display = 'block';
+            
+            if (data.data.available_slots <= 0) {
+              card.classList.add('border-warning');
+              card.classList.remove('border-success');
+            } else {
+              card.classList.add('border-success');
+              card.classList.remove('border-warning');
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error loading class info:', error);
+        });
+    }
+
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const studentId = document.getElementById('student_id').value;
+      const classId = document.getElementById('class_id').value;
+      
+      if (!studentId || !classId) {
+        e.preventDefault();
+        alert('Vui lòng chọn học viên và lớp học!');
+        return false;
+      }
+      
+      // Check if class is full when status is approved
+      const status = document.getElementById('status').value;
+      if (status === 'approved') {
+        const availableSlotsElement = document.getElementById('available-slots');
+        if (availableSlotsElement && availableSlotsElement.textContent) {
+          const availableSlots = parseInt(availableSlotsElement.textContent);
+          if (availableSlots <= 0) {
+            e.preventDefault();
+            alert('Lớp học đã đầy, không thể đăng ký với trạng thái "Đã duyệt"!');
+            return false;
+          }
+        }
+      }
+    }); 

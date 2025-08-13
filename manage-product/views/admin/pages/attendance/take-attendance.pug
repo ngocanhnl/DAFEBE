@@ -1,0 +1,448 @@
+//- extends ../../layouts/default
+
+//- block main
+//-   .d-flex.justify-content-between.align-items-center.mb-4
+//-     h1 Điểm danh lớp học
+//-     .btn-group
+//-       a.btn.btn-outline-secondary(href=`/admin/attendance/history/${classItem._id}`) 
+//-         i.fas.fa-history.me-2
+//-         | Lịch sử điểm danh
+//-       a.btn.btn-outline-info(href=`/admin/classes/${classItem._id}`) 
+//-         i.fas.fa-arrow-left.me-2
+//-         | Quay lại
+
+//-   .row
+//-     .col-md-8
+//-       .card
+//-         .card-header
+//-            h5.mb-0 Thông tin lớp học
+//-         .card-body
+//-           .row
+//-             .col-md-6
+//-               p
+//-                 strong Mã lớp: 
+//-                 span #{classItem.class_code}
+//-               p
+//-                 strong Khóa học: 
+//-                 span #{classItem.course_title}
+//-               p
+//-                 strong Lịch học: 
+//-                 span #{classItem.schedule}
+//-             .col-md-6
+//-               p
+//-                 strong Ngày hôm nay: 
+//-                 span #{today.toLocaleDateString('vi-VN')}
+//-               p
+//-                 strong Sĩ số: 
+//-                 span #{students.length} học viên
+//-               p
+//-                 strong Địa điểm: 
+//-                 span #{classItem.location || 'Chưa cập nhật'}
+
+//-     .col-md-4
+//-       .card
+//-         .card-header
+//-           h5.mb-0 Thống kê nhanh
+//-         .card-body
+//-           .row.text-center
+//-             .col-6
+//-               .border-end
+//-                 h4.text-success#present-count 0
+//-                 small.text-muted Có mặt
+//-             .col-6
+//-               h4.text-danger#absent-count 0
+//-               small.text-muted Vắng mặt
+
+//-   .card.mt-4
+//-     .card-header
+//-       .d-flex.justify-content-between.align-items-center
+//-         h5.mb-0 Danh sách điểm danh
+//-         .btn-group
+//-           if totalSessions && totalSessions > 0
+//-             .me-3
+//-               label.form-label.mb-0.me-2 Buổi học:
+//-               select.form-select.form-select-sm.d-inline-block(style="width: auto;" name="session_number" form="attendance-form")
+//-                 - for (let i = 1; i <= totalSessions; i++) {
+//-                 option(value=i selected=(i === nextSessionNumber) disabled=(takenSessionNumbers.includes(i))) Buổi #{i}
+//-                 - }
+//-               small.text-muted.ms-2 (Tổng: #{totalSessions} buổi)
+//-           button.btn.btn-success#save-attendance(type="button") 
+//-             i.fas.fa-save.me-2
+//-             | Lưu điểm danh
+//-           button.btn.btn-outline-secondary#select-all(type="button") Chọn tất cả
+//-           button.btn.btn-outline-secondary#clear-all(type="button") Bỏ chọn tất cả
+
+//-     .card-body
+//-       form#attendance-form(action=`/admin/attendance/class/${classItem._id}/take` method="POST")
+//-         input(type="hidden" name="session_date" value=today.toISOString().split('T')[0])
+        
+//-         .table-responsive
+//-           table.table.table-striped
+//-             thead
+//-               tr
+//-                 th STT
+//-                 th Học viên
+//-                 th Trạng thái
+//-                 th Ghi chú
+//-             tbody
+//-               each student, index in students
+//-                 tr
+//-                   td #{index + 1}
+//-                   td
+//-                     .d-flex.align-items-center
+//-                       if student.avatar
+//-                         img.rounded-circle.me-2(src=student.avatar width="32" height="32")
+//-                       else
+//-                         .bg-secondary.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 32px; height: 32px;")
+//-                           i.fas.fa-user.text-white
+//-                       div
+//-                         strong #{student.fullName}
+//-                         br
+//-                         small.text-muted #{student.email}
+//-                   td
+//-                     .form-check.form-check-inline
+//-                       input.form-check-input.attendance-check(
+//-                         type="radio" 
+//-                         name=`attendance[${student._id}]` 
+//-                         value="present" 
+//-                         id=`present-${student._id}`
+//-                         checked
+//-                       )
+//-                       label.form-check-label(for=`present-${student._id}`) Có mặt
+//-                     .form-check.form-check-inline
+//-                       input.form-check-input.attendance-check(
+//-                         type="radio" 
+//-                         name=`attendance[${student._id}]` 
+//-                         value="absent" 
+//-                         id=`absent-${student._id}`
+//-                       )
+//-                       label.form-check-label(for=`absent-${student._id}`) Vắng mặt
+//-                     .form-check.form-check-inline
+//-                       input.form-check-input.attendance-check(
+//-                         type="radio" 
+//-                         name=`attendance[${student._id}]` 
+//-                         value="late" 
+//-                         id=`late-${student._id}`
+//-                       )
+//-                       label.form-check-label(for=`late-${student._id}`) Đi muộn
+//-                   td
+//-                     input.form-control.form-control-sm(
+//-                       type="text" 
+//-                       name=`note[${student._id}]` 
+//-                       placeholder="Ghi chú (nếu có)"
+//-                     )
+
+//-   // Previous attendance records for reference
+//-   if previousAttendance && previousAttendance.length > 0
+//-     .card.mt-4
+//-       .card-header
+//-         h5.mb-0 Điểm danh gần đây
+//-       .card-body
+//-         .table-responsive
+//-           table.table.table-sm
+//-             thead
+//-               tr
+//-                 th Ngày
+//-                 th Có mặt
+//-                 th Vắng mặt
+//-                 th Đi muộn
+//-                 th Tỷ lệ
+//-             tbody
+//-               each record in previousAttendance
+//-                 tr
+//-                   td #{record.session_date.toLocaleDateString('vi-VN')}
+//-                   td 
+//-                     span.badge.bg-success #{record.present_count}
+//-                   td 
+//-                     span.badge.bg-danger #{record.absent_count}
+//-                   td 
+//-                     span.badge.bg-warning #{record.late_count || 0}
+//-                   td 
+//-                     span.badge.bg-info #{Math.round((record.present_count / (record.present_count + record.absent_count + (record.late_count || 0))) * 100)}%
+
+
+//-   script.
+//-     // Attendance counter
+//-     function updateCounters() {
+//-       const presentCount = document.querySelectorAll('input[value="present"]:checked').length;
+//-       const absentCount = document.querySelectorAll('input[value="absent"]:checked').length;
+//-       const lateCount = document.querySelectorAll('input[value="late"]:checked').length;
+      
+//-       document.getElementById('present-count').textContent = presentCount;
+//-       document.getElementById('absent-count').textContent = absentCount + lateCount;
+//-     }
+
+//-     // Update counters when attendance changes
+//-     document.querySelectorAll('.attendance-check').forEach(checkbox => {
+//-       checkbox.addEventListener('change', updateCounters);
+//-     });
+
+//-     // Select all present
+//-     document.getElementById('select-all').addEventListener('click', function() {
+//-       document.querySelectorAll('input[value="present"]').forEach(radio => {
+//-         radio.checked = true;
+//-       });
+//-       updateCounters();
+//-     });
+
+//-     // Clear all
+//-     document.getElementById('clear-all').addEventListener('click', function() {
+//-       document.querySelectorAll('.attendance-check').forEach(radio => {
+//-         radio.checked = false;
+//-       });
+//-       updateCounters();
+//-     });
+
+//-     // Save attendance
+//-     document.getElementById('save-attendance').addEventListener('click', function() {
+//-       const form = document.getElementById('attendance-form');
+//-       const formData = new FormData(form);
+      
+//-       fetch(form.action, {
+//-         method: 'POST',
+//-         body: formData
+//-       })
+//-       .then(response => response.json())
+//-       .then(data => {
+//-         if (data.success) {
+//-           alert('Điểm danh đã được lưu thành công!');
+//-           window.location.href = `/admin/attendance/history/${classItem._id}`;
+//-         } else {
+//-           alert('Có lỗi xảy ra: ' + data.message);
+//-         }
+//-       })
+//-       .catch(error => {
+//-         console.error('Error:', error);
+//-         alert('Có lỗi xảy ra khi lưu điểm danh!');
+//-       });
+//-     });
+
+//-     // Initialize counters
+//-     updateCounters(); 
+
+extends ../../layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Điểm danh lớp học
+    .btn-group
+      a.btn.btn-outline-secondary(href=`/admin/attendance/history/${classItem._id}`) 
+        i.fas.fa-history.me-2
+        | Lịch sử điểm danh
+      a.btn.btn-outline-info(href=`/admin/classes/${classItem._id}`) 
+        i.fas.fa-arrow-left.me-2
+        | Quay lại
+
+  .row
+    .col-md-8
+      .card
+        .card-header
+           h5.mb-0 Thông tin lớp học
+        .card-body
+          .row
+            .col-md-6
+              p
+                strong Mã lớp: 
+                span #{classItem.class_code}
+              p
+                strong Khóa học: 
+                span #{classItem.course_title}
+              p
+                strong Lịch học: 
+                span #{classItem.schedule}
+            .col-md-6
+              p
+                strong Ngày hôm nay: 
+                span #{today.toLocaleDateString('vi-VN')}
+              p
+                strong Sĩ số: 
+                span #{students.length} học viên
+              p
+                strong Địa điểm: 
+                span #{classItem.location || 'Chưa cập nhật'}
+
+    .col-md-4
+      .card
+        .card-header
+          h5.mb-0 Thống kê nhanh
+        .card-body
+          .row.text-center
+            .col-6
+              .border-end
+                h4.text-success#present-count 0
+                small.text-muted Có mặt
+            .col-6
+              h4.text-danger#absent-count 0
+              small.text-muted Vắng mặt
+
+  .card.mt-4
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Danh sách điểm danh
+        if totalSessions && totalSessions > 0
+          .me-3
+            label.form-label.mb-0.me-2 Buổi học:
+            select#session-number.form-select.form-select-sm.d-inline-block(style="width: auto;" name="session_number" form="attendance-form")
+              - for (let i = 1; i <= totalSessions; i++) {
+              option(value=i selected=(i === nextSessionNumber) disabled=(takenSessionNumbers.includes(i))) Buổi #{i}
+              - }
+            small.text-muted.ms-2 (Tổng: #{totalSessions} buổi)
+
+    .card-body
+      form#attendance-form(action=`/admin/attendance/class/${classItem._id}/take` method="POST")
+        input(type="hidden" name="session_date" value=today.toISOString().split('T')[0])
+        
+        .table-responsive
+          table.table.table-striped
+            thead
+              tr
+                th STT
+                th Học viên
+                th Trạng thái
+                th Ghi chú
+            tbody
+              each student, index in students
+                tr
+                  td #{index + 1}
+                  td
+                    .d-flex.align-items-center
+                      if student.avatar
+                        img.rounded-circle.me-2(src=student.avatar width="32" height="32")
+                      else
+                        .bg-secondary.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 32px; height: 32px;")
+                          i.fas.fa-user.text-white
+                      div
+                        strong #{student.fullName}
+                        br
+                        small.text-muted #{student.email}
+                  td
+                    .form-check.form-check-inline
+                      input.form-check-input.attendance-check(
+                        type="radio" 
+                        name=`attendance[${student._id}]` 
+                        value="present" 
+                        id=`present-${student._id}`
+                        checked
+                      )
+                      label.form-check-label(for=`present-${student._id}`) Có mặt
+                    .form-check.form-check-inline
+                      input.form-check-input.attendance-check(
+                        type="radio" 
+                        name=`attendance[${student._id}]` 
+                        value="absent" 
+                        id=`absent-${student._id}`
+                      )
+                      label.form-check-label(for=`absent-${student._id}`) Vắng mặt
+                    .form-check.form-check-inline
+                      input.form-check-input.attendance-check(
+                        type="radio" 
+                        name=`attendance[${student._id}]` 
+                        value="late" 
+                        id=`late-${student._id}`
+                      )
+                      label.form-check-label(for=`late-${student._id}`) Đi muộn
+                  td
+                    input.form-control.form-control-sm(
+                      type="text" 
+                      name=`note[${student._id}]` 
+                      placeholder="Ghi chú (nếu có)"
+                    )
+
+        .mt-3
+          button.btn.btn-success(type="submit") 
+            i.fas.fa-save.me-2
+            | Lưu điểm danh
+          button.btn.btn-outline-secondary#select-all(type="button") Chọn tất cả
+          button.btn.btn-outline-secondary#clear-all(type="button") Bỏ chọn tất cả
+
+  if previousAttendance && previousAttendance.length > 0
+    .card.mt-4
+      .card-header
+        h5.mb-0 Điểm danh gần đây
+      .card-body
+        .table-responsive
+          table.table.table-sm
+            thead
+              tr
+                th Ngày
+                th Có mặt
+                th Vắng mặt
+                th Đi muộn
+                th Tỷ lệ
+            tbody
+              each record in previousAttendance
+                tr
+                  td #{record.session_date.toLocaleDateString('vi-VN')}
+                  td 
+                    span.badge.bg-success #{record.present_count}
+                  td 
+                    span.badge.bg-danger #{record.absent_count}
+                  td 
+                    span.badge.bg-warning #{record.late_count || 0}
+                  td 
+                    span.badge.bg-info #{Math.round((record.present_count / (record.present_count + record.absent_count + (record.late_count || 0))) * 100)}%
+
+  script.
+    function updateCounters() {
+      const presentCount = document.querySelectorAll('input[value="present"]:checked').length;
+      const absentCount = document.querySelectorAll('input[value="absent"]:checked').length;
+      const lateCount = document.querySelectorAll('input[value="late"]:checked').length;
+      document.getElementById('present-count').textContent = presentCount;
+      document.getElementById('absent-count').textContent = absentCount + lateCount;
+    }
+
+    document.querySelectorAll('.attendance-check').forEach(checkbox => {
+      checkbox.addEventListener('change', updateCounters);
+    });
+
+    document.getElementById('select-all').addEventListener('click', function() {
+      document.querySelectorAll('input[value="present"]').forEach(radio => {
+        radio.checked = true;
+      });
+      updateCounters();
+    });
+
+    document.getElementById('clear-all').addEventListener('click', function() {
+      document.querySelectorAll('.attendance-check').forEach(radio => {
+        radio.checked = false;
+      });
+      updateCounters();
+    });
+
+    updateCounters();
+
+    // Load attendance of selected session
+    (function(){
+      const sessionSelect = document.getElementById('session-number');
+      if (!sessionSelect) return;
+      sessionSelect.addEventListener('change', function() {
+        const sessionNumber = this.value;
+        fetch(`/admin/attendance/class/${classItem._id}/session/${sessionNumber}`)
+          .then(res => res.json())
+          .then(payload => {
+            if (payload && payload.success && payload.data) {
+              const data = payload.data.attendance_data || [];
+              // Reset choices
+              document.querySelectorAll('.attendance-check').forEach(r => r.checked = false);
+              document.querySelectorAll('input[name^="note["]').forEach(i => i.value = '');
+              data.forEach(item => {
+                const idMap = {
+                  present: `present-${item.student_id}`,
+                  absent: `absent-${item.student_id}`,
+                  late: `late-${item.student_id}`
+                };
+                const target = document.getElementById(idMap[item.status || 'absent']);
+                if (target) target.checked = true;
+                const noteInput = document.querySelector(`input[name="note[${item.student_id}]"]`);
+                if (noteInput) noteInput.value = item.notes || '';
+              });
+            } else {
+              // Default all present and clear notes
+              document.querySelectorAll('input[value="present"]').forEach(r => r.checked = true);
+              document.querySelectorAll('input[name^="note["]').forEach(i => i.value = '');
+            }
+            updateCounters();
+          })
+          .catch(err => console.error(err));
+      });
+    })();

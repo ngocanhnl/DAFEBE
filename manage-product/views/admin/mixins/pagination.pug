@@ -1,0 +1,58 @@
+mixin pagination(pagination)
+  if pagination.totalPages > 1
+    nav
+      ul(class="pagination justify-content-center")
+        // Previous button
+        li(class="page-item")
+          if pagination.page > 1
+            a(class="page-link" href=`?page=${pagination.page - 1}`) &laquo; Trước
+          else
+            span(class="page-link disabled") &laquo; Trước
+        
+        // Page numbers
+        - let startPage = Math.max(1, pagination.page - 2)
+        - let endPage = Math.min(pagination.totalPages, pagination.page + 2)
+        
+        if startPage > 1
+          li(class="page-item")
+            a(class="page-link" href="?page=1") 1
+          if startPage > 2
+            li(class="page-item disabled")
+              span(class="page-link") ...
+        
+        - for(let i = startPage; i <= endPage; i++)
+          li(class=`page-item ${pagination.page == i ? "active" : ""}`)
+            a(class="page-link" href=`?page=${i}`) #{i}
+        
+        if endPage < pagination.totalPages
+          if endPage < pagination.totalPages - 1
+            li(class="page-item disabled")
+              span(class="page-link") ...
+          li(class="page-item")
+            a(class="page-link" href=`?page=${pagination.totalPages}`) #{pagination.totalPages}
+        
+        // Next button
+        li(class="page-item")
+          if pagination.page < pagination.totalPages
+            a(class="page-link" href=`?page=${pagination.page + 1}`) Sau &raquo;
+          else
+            span(class="page-link disabled") Sau &raquo;
+    
+    // Preserve query parameters
+    script.
+      document.addEventListener('DOMContentLoaded', function() {
+        const paginationLinks = document.querySelectorAll('.pagination .page-link');
+        paginationLinks.forEach(link => {
+          if (link.href) {
+            const url = new URL(link.href);
+            // Preserve existing query parameters
+            const currentParams = new URLSearchParams(window.location.search);
+            currentParams.forEach((value, key) => {
+              if (key !== 'page') {
+                url.searchParams.set(key, value);
+              }
+            });
+            link.href = url.toString();
+          }
+        });
+      });

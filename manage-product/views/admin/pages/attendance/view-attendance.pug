@@ -1,0 +1,98 @@
+extends ../../layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Chi tiết điểm danh
+    .btn-group
+      a.btn.btn-outline-secondary(href=`/admin/attendance/history/${classData.class_id}`)
+        i.fas.fa-history.me-2
+        | Lịch sử điểm danh
+      a.btn.btn-outline-info(href=`/admin/classes/${classData._id}`)
+        i.fas.fa-arrow-left.me-2
+        | Quay lại lớp học
+
+  .row
+    .col-md-4
+      .card.mb-4
+        .card-header
+          h5.mb-0 Thông tin buổi học
+        .card-body
+          p
+            strong Lớp: 
+            span #{classData.class_name}
+          p
+            strong Khóa học: 
+            span #{classData.course_id.title}
+          p
+            strong Buổi học: 
+            span Buổi #{attendance.session_number || '-'}
+          p
+            strong Ngày học: 
+            span #{attendance.session_date ? new Date(attendance.session_date).toLocaleDateString('vi-VN') : '-'}
+          p
+            strong Ghi chú: 
+            span #{attendance.notes || ''}
+
+      .card
+        .card-header
+          h5.mb-0 Thống kê nhanh
+        .card-body
+          .row.text-center
+            .col-4
+              h4.text-success #{stats.present}
+              small.text-muted Có mặt
+            .col-4
+              h4.text-warning #{stats.late}
+              small.text-muted Đi muộn
+            .col-4
+              h4.text-danger #{stats.absent}
+              small.text-muted Vắng
+          .mt-2.text-center
+            span.badge.bg-info #{stats.rate}% tham gia
+
+    .col-md-8
+      .card
+        .card-header
+          h5.mb-0 Danh sách học viên
+        .card-body
+          if !students || students.length === 0
+            .text-center.py-4
+              i.fas.fa-inbox.fa-3x.text-muted.mb-3
+              h5.text-muted Không có dữ liệu
+          else
+            .table-responsive
+              table.table.table-striped
+                thead
+                  tr
+                    th #
+                    th Học viên
+                    th Email
+                    th Điện thoại
+                    th Trạng thái
+                    th Ghi chú
+                tbody
+                  each s, idx in students
+                    tr
+                      td #{idx + 1}
+                      td
+                        .d-flex.align-items-center
+                          if s.avatar
+                            img.rounded-circle.me-2(src=s.avatar width="28" height="28")
+                          else
+                            .bg-secondary.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 28px; height: 28px;")
+                              i.fas.fa-user.text-white
+                          span #{s.fullName}
+                      td #{s.email}
+                      td #{s.phone}
+                      td
+                        if s.status === 'present'
+                          span.badge.bg-success Có mặt
+                        else if s.status === 'late'
+                          span.badge.bg-warning Đi muộn
+                        else if s.status === 'excused'
+                          span.badge.bg-info Có phép
+                        else
+                          span.badge.bg-danger Vắng
+                      td #{s.notes}
+
+

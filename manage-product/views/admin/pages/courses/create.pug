@@ -1,0 +1,343 @@
+//- extends ../../layouts/default.pug
+//- include ../../mixins/alert.pug
+//- include ../../mixins/selectTree.pug
+
+
+//- block main
+//-   +alert-error(5000)
+//-   if(role.permission.includes("courses_create"))
+//-     h1(class="mb-4") Thêm mới khóa học
+//-     form(
+//-       action=`/${prefixAdmin}/courses/create`
+//-       method="POST"
+//-       enctype="multipart/form-data"
+//-     )
+//-       div(class="form-group")
+//-         label(for="title") Tên khóa học
+//-         input(
+//-           type="text"
+//-           class="form-control"
+//-           id="title"
+//-           name="title"
+//-           required
+//-         )
+//-       div(class="form-group")
+//-         label(for="course_category_id") Danh mục khóa học
+//-         select(
+//-           name="course_category_id"
+//-           id="course_category_id"
+//-           class="form-control"
+//-         )
+//-           option(value="") -- Chọn danh mục khóa học --
+//-             +selectTree(records)
+
+//-       div(class="form-group")
+//-         label(for="instructor") Giảng viên
+//-         input(
+//-           type="text"
+//-           class="form-control"
+//-           id="instructor"
+//-           name="instructor"
+//-           required
+//-         )
+//-       div(class="form-group")
+//-         label(for="level") Cấp độ
+//-         select(
+//-           name="level"
+//-           id="level"
+//-           class="form-control"
+//-         )
+//-           option(value="") -- Chọn cấp độ --
+//-           option(value="Beginner") Người mới bắt đầu
+//-           option(value="Intermediate") Trung cấp
+//-           option(value="Advanced") Nâng cao
+
+//-       div(class="form-group")
+//-         label(for="language") Ngôn ngữ giảng dạy
+//-         input(
+//-           type="text"
+//-           class="form-control"
+//-           id="language"
+//-           name="language"
+//-           value="Tiếng Việt"
+//-         )
+//-       div(class="form-group")
+//-         label(for="duration") Thời lượng (phút)
+//-         input(
+//-           type="number"
+//-           class="form-control"
+//-           id="duration"
+//-           name="duration"
+//-           value="0"
+//-           min="0"
+//-           required
+//-         )
+//-       div(class="form-group form-check form-check-inline")
+//-         input(
+//-           type="radio"
+//-           class="form-check-input"
+//-           id="featured1"
+//-           name="featured"
+//-           value="1"
+//-         )
+//-         label(for="featured1" class="form-check-label") Nổi bật
+//-       div(class="form-group form-check form-check-inline")
+//-         input(
+//-           type="radio"
+//-           class="form-check-input"
+//-           id="featured0"
+//-           name="featured"
+//-           value="0"
+//-           checked
+//-         )
+//-         label(for="featured0" class="form-check-label") Không
+//-       div(class="form-group")
+//-         label(for="desc") Mô tả
+//-         textarea(
+//-           class="form-control textarea-mce"
+//-           id="desc"
+//-           name="description"
+//-           rows="5"
+//-         )
+//-       div(class="form-group")
+//-         label(for="content") Nội dung khóa học
+//-         textarea(
+//-           class="form-control textarea-mce"
+//-           id="content"
+//-           name="content"
+//-           rows="10"
+//-         )
+//-       div(class="form-group")
+//-         label(for="price") Giá (VNĐ)
+//-         input(
+//-           type="number"
+//-           class="form-control"
+//-           id="price"
+//-           name="price"
+//-           value="0"
+//-           min="0"
+//-           required
+//-         )
+//-       div(class="form-group")
+//-         label(for="discount") % Giảm giá
+//-         input(
+//-           type="number"
+//-           class="form-control"
+//-           id="discount"
+//-           name="discountPercentage"
+//-           value="0"
+//-           min="0"
+//-         )
+//-       div(class="form-group")
+//-         label(for="video_intro") Link video giới thiệu
+//-         input(
+//-           type="text"
+//-           class="form-control"
+//-           id="video_intro"
+//-           name="video_intro"
+//-           placeholder="https://www.youtube.com/watch?v=..."
+//-         )
+//-       div(
+//-         class="form-group"
+//-         upload-image
+//-       )
+//-         label(for="thumbnail") Ảnh đại diện
+//-         input(
+//-           type="file"
+//-           class="form-control-file"
+//-           id="thumbnail"
+//-           name="thumbnail"
+//-           accept="image/*"
+//-           upload-image-input
+//-         )
+//-         img(
+//-           src=""
+//-           class="image-preview"
+//-           upload-image-preview
+//-         )
+//-       div(class="form-group")
+//-         label(for="position") Vị trí
+//-         input(
+//-           type="number"
+//-           class="form-control"
+//-           id="position"
+//-           name="position"
+//-           placeholder="Tự động tăng"
+//-           min="1"
+//-         )
+//-       div(class="form-group form-check form-check-inline")
+//-         input(
+//-           type="radio"
+//-           class="form-check-input"
+//-           id="statusActive"
+//-           name="status"
+//-           value="active"
+//-           checked
+//-         )
+//-         label(for="statusActive" class="form-check-label") Hoạt động
+//-       div(class="form-group form-check form-check-inline")
+//-         input(
+//-           type="radio"
+//-           class="form-check-input"
+//-           id="statusInActive"
+//-           name="status"
+//-           value="inactive"
+//-         )
+//-         label(for="statusInActive" class="form-check-label") Dừng hoạt động
+//-       div(class="form-group")
+//-         button(
+//-           type="submit"
+//-           class="btn btn-primary"
+//-         ) Tạo mới 
+
+
+extends ../../layouts/default.pug
+include ../../mixins/alert.pug
+include ../../mixins/selectTree.pug
+
+block main
+  +alert-error(5000)
+  if(role.permission.includes("courses_create"))
+    h1.mb-4 Thêm mới khóa học
+    form(
+      action=`/${prefixAdmin}/courses/create`
+      method="POST"
+      enctype="multipart/form-data"
+    )
+      .form-group
+        label(for="title") Tên khóa học
+        input#title.form-control(
+          type="text"
+          name="title"
+          required
+        )
+      .form-group
+        label(for="course_category_id") Danh mục khóa học
+        select#course_category_id.form-control(name="course_category_id")
+          option(value="") -- Chọn danh mục khóa học --
+          +selectTree(records)
+
+      //- .form-group
+      //-   label(for="instructor") Giảng viên
+      //-   select#instructor.form-control(name="instructor" required)
+      //-     option(value="") -- Chọn giảng viên --
+      //-     each instructor in instructors
+      //-       option(value=instructor._id) #{instructor.fullName}
+
+      .form-group
+        label(for="level") Cấp độ
+        select#level.form-control(name="level")
+          option(value="") -- Chọn cấp độ --
+          option(value="Beginner") Người mới bắt đầu
+          option(value="Intermediate") Trung cấp
+          option(value="Advanced") Nâng cao
+
+      .form-group
+        label(for="language") Ngôn ngữ giảng dạy
+        input#language.form-control(
+          type="text"
+          name="language"
+          value="Tiếng Việt"
+        )
+
+      .form-group
+        label(for="duration") Thời lượng (phút)
+        input#duration.form-control(
+          type="number"
+          name="duration"
+          value="0"
+          min="0"
+          required
+        )
+
+      .form-group.form-check.form-check-inline
+        input#featured1.form-check-input(
+          type="radio"
+          name="featured"
+          value="1"
+        )
+        label.form-check-label(for="featured1") Nổi bật
+
+      .form-group.form-check.form-check-inline
+        input#featured0.form-check-input(
+          type="radio"
+          name="featured"
+          value="0"
+          checked
+        )
+        label.form-check-label(for="featured0") Không
+
+      .form-group
+        label(for="desc") Mô tả
+        textarea#desc.form-control.textarea-mce(
+          name="description"
+          rows="5"
+        )
+
+      .form-group
+        label(for="content") Nội dung khóa học
+        textarea#content.form-control.textarea-mce(
+          name="content"
+          rows="10"
+        )
+
+      .form-group
+        label(for="price") Giá (VNĐ)
+        input#price.form-control(
+          type="number"
+          name="price"
+          value="0"
+          min="0"
+          required
+        )
+
+      .form-group
+        label(for="discount") % Giảm giá
+        input#discount.form-control(
+          type="number"
+          name="discountPercentage"
+          value="0"
+          min="0"
+        )
+
+      .form-group(upload-image)
+        label(for="thumbnail") Ảnh đại diện
+        input#thumbnail.form-control-file(
+          type="file"
+          name="thumbnail"
+          accept="image/*"
+          upload-image-input
+        )
+        img.image-preview(
+          src=""
+          upload-image-preview
+        )
+
+      .form-group
+        label(for="position") Vị trí
+        input#position.form-control(
+          type="number"
+          name="position"
+          placeholder="Tự động tăng"
+          min="1"
+        )
+
+      .form-group.form-check.form-check-inline
+        input#statusActive.form-check-input(
+          type="radio"
+          name="status"
+          value="active"
+          checked
+        )
+        label.form-check-label(for="statusActive") Hoạt động
+
+      .form-group.form-check.form-check-inline
+        input#statusInActive.form-check-input(
+          type="radio"
+          name="status"
+          value="inactive"
+        )
+        label.form-check-label(for="statusInActive") Dừng hoạt động
+
+      .form-group
+        button.btn.btn-primary(type="submit") Tạo mới

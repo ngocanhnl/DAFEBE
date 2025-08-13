@@ -1,0 +1,201 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Thống kê ghi danh
+
+  .card.mb-4
+    .card-header
+      h5.mb-0 Bộ lọc
+    .card-body
+      form(action="/admin/revenue/enrollment-stats" method="GET")
+        .row
+          .col-md-3
+            label.form-label Từ ngày
+            input.form-control(type="date" name="start_date" value=query.start_date)
+          .col-md-3
+            label.form-label Đến ngày
+            input.form-control(type="date" name="end_date" value=query.end_date)
+          .col-md-3
+            label.form-label Khóa học
+            select.form-select(name="course_id")
+              option(value="") Tất cả khóa học
+              each course in courses
+                option(value=course._id selected=query.course_id == course._id.toString()) #{course.title}
+          .col-md-3
+            label.form-label Lớp học
+            select.form-select(name="class_id")
+              option(value="") Tất cả lớp
+              each cls in classes
+                option(value=cls._id selected=query.class_id == cls._id.toString()) #{cls.class_name}
+
+        .row.mt-3
+          .col-md-3
+            label.form-label Tình trạng ghi danh
+            select.form-select(name="status")
+              option(value="") Tất cả
+              option(value="pending" selected=query.status === 'pending') Chờ duyệt
+              option(value="approved" selected=query.status === 'approved') Đã duyệt
+              option(value="rejected" selected=query.status === 'rejected') Từ chối
+              option(value="cancelled" selected=query.status === 'cancelled') Hủy
+              option(value="completed" selected=query.status === 'completed') Hoàn tất
+          .col-md-3
+            label.form-label Tình trạng thanh toán
+            select.form-select(name="payment_status")
+              option(value="") Tất cả
+              option(value="pending" selected=query.payment_status === 'pending') Chờ thanh toán
+              option(value="paid" selected=query.payment_status === 'paid') Đã thanh toán
+              option(value="refunded" selected=query.payment_status === 'refunded') Hoàn tiền
+          .col-md-3
+            label.form-label Nhóm theo
+            select.form-select(name="group_by")
+              option(value="monthly" selected=query.group_by === 'monthly') Theo tháng
+              option(value="yearly" selected=query.group_by === 'yearly') Theo năm
+              option(value="course" selected=query.group_by === 'course') Theo khóa học
+              option(value="class" selected=query.group_by === 'class') Theo lớp học
+              option(value="status" selected=query.group_by === 'status') Theo tình trạng
+          .col-md-3
+            label.form-label &nbsp;
+            button.btn.btn-primary.w-100(type="submit") Lọc
+
+  if summary
+    .row.mb-4
+      .col-md-4
+        .card.bg-primary.text-white
+          .card-body.text-center
+            h4 #{summary.total_students}
+            small Tổng số ghi danh
+      .col-md-4
+        .card.bg-success.text-white
+          .card-body.text-center
+            h4 #{summary.total_paid_students}
+            small Đã thanh toán
+      .col-md-4
+        .card.bg-warning.text-white
+          .card-body.text-center
+            h4 #{summary.total_revenue.toLocaleString('vi-VN')}đ
+            small Doanh thu (đã thanh toán)
+
+  if chartData
+    .row.mb-4
+      .col-md-4
+        .card.mb-4
+          .card-header
+            h5.mb-0 Biểu đồ số ghi danh
+          .card-body.text-center
+            canvas#studentsChart(width="200" height="200")
+
+      .col-md-4
+        .card.mb-4
+          .card-header
+            h5.mb-0 Biểu đồ số đã thanh toán
+          .card-body.text-center
+            canvas#paidStudentsChart(width="200" height="200")
+
+      .col-md-4
+        .card.mb-4
+          .card-header
+            h5.mb-0 Biểu đồ doanh thu
+          .card-body.text-center
+            canvas#revenueChart(width="200" height="200")
+
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script.
+    const chartData = !{JSON.stringify(chartData)};
+
+    // Chart 1: Ghi danh
+    if (document.getElementById('studentsChart')) {
+      new Chart(document.getElementById('studentsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Số ghi danh',
+            data: chartData.students,
+            backgroundColor: 'rgba(54, 162, 235, 0.5)'
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // Chart 2: Đã thanh toán
+    if (document.getElementById('paidStudentsChart')) {
+      new Chart(document.getElementById('paidStudentsChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Đã thanh toán',
+            data: chartData.paidStudents,
+            backgroundColor: 'rgba(75, 192, 192, 0.5)'
+          }]
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+      });
+    }
+
+    // Chart 3: Doanh thu
+    if (document.getElementById('revenueChart')) {
+      new Chart(document.getElementById('revenueChart').getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Doanh thu',
+            data: chartData.revenue,
+            borderColor: 'rgba(255, 159, 64, 1)',
+            backgroundColor: 'rgba(255, 159, 64, 0.2)',
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString('vi-VN') + 'đ';
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+
+  //- script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  //- script.
+  //-   if (document.getElementById('enrollmentChart')) {
+  //-     const ctx = document.getElementById('enrollmentChart').getContext('2d');
+  //-     const chartData = !{JSON.stringify(chartData)};
+  //-     new Chart(ctx, {
+  //-       type: 'bar',
+  //-       data: {
+  //-         labels: chartData.labels,
+  //-         datasets: [
+  //-           { label: 'Ghi danh', data: chartData.students, backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+  //-           { label: 'Đã thanh toán', data: chartData.paidStudents, backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+  //-           { label: 'Doanh thu', data: chartData.revenue, type: 'line', borderColor: 'rgba(255, 159, 64, 1)', yAxisID: 'y1' },
+  //-         ]
+  //-       },
+  //-       options: {
+  //-         responsive: true,
+  //-         interaction: { mode: 'index', intersect: false },
+  //-         scales: {
+  //-           y: { beginAtZero: true },
+  //-           y1: {
+  //-             type: 'linear',
+  //-             position: 'right',
+  //-             grid: { drawOnChartArea: false },
+  //-             ticks: {
+  //-               callback: function(value) { return value.toLocaleString('vi-VN') + 'đ'; }
+  //-             }
+  //-           }
+  //-         }
+  //-       }
+  //-     });
+  //-   }
+
+

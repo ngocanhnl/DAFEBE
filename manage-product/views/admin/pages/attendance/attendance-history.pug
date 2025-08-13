@@ -1,0 +1,67 @@
+extends ../../layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Lịch sử điểm danh
+    .btn-group
+      a.btn.btn-outline-info(href=`/admin/classes/${classData._id}`)
+        i.fas.fa-arrow-left.me-2
+        | Quay lại lớp học
+
+  // Thông tin lớp học
+  .card.mb-4
+    .card-header
+      h5.mb-0 Thông tin lớp học
+    .card-body
+      .row
+        .col-md-6
+          p
+            strong Lớp học: 
+            span #{classData.class_name}
+          p
+            strong Khóa học: 
+            span #{classData.course_id.title}
+          p
+            strong Giảng viên: 
+            span #{classData.instructor_id && classData.instructor_id.fullName || ''}
+        .col-md-6
+          p
+            strong Số buổi đã điểm danh: 
+            span #{attendanceHistory.length}
+          p
+            strong Tổng buổi học: 
+            span #{classData.course_id.duration || 0}
+
+  // Danh sách buổi học
+  .card
+    .card-header
+      h5.mb-0 Các buổi học đã điểm danh
+    .card-body
+      if !attendanceHistory || attendanceHistory.length === 0
+        .text-center.py-4
+          i.fas.fa-inbox.fa-3x.text-muted.mb-3
+          h5.text-muted Chưa có dữ liệu điểm danh
+      else
+        .table-responsive
+          table.table.table-striped
+            thead
+              tr
+                th Buổi
+                th Ngày học
+                th Tỷ lệ (có mặt + đi muộn)
+                th Người điểm danh
+                th Ghi chú
+                th Thao tác
+            tbody
+              each record in attendanceHistory
+                tr
+                  td Buổi #{record.session_number || '-'}
+                  td #{record.session_date ? new Date(record.session_date).toLocaleDateString('vi-VN') : '-'}
+                  td
+                    span.badge.bg-info #{record.attendance_rate || 0}%
+                  td #{record.instructor_id ? record.instructor_id.fullName : '-'}
+                  td #{record.notes || ''}
+                  td
+                    a.btn.btn-sm.btn-outline-primary(href=`/admin/attendance/view/${record._id}`) Xem chi tiết
+
+

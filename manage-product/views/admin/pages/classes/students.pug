@@ -1,0 +1,67 @@
+extends ../../layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Danh sách học viên
+    .btn-group
+      a.btn.btn-secondary(href=`/admin/classes/detail/${classData._id}`)
+        i.fas.fa-arrow-left.me-2
+        | Quay lại chi tiết lớp
+
+  // Thông tin lớp học
+  .card.mb-4
+    .card-header
+      h5.mb-0 Thông tin lớp học
+    .card-body
+      .row
+        .col-md-6
+          p
+            strong Lớp học: 
+            span #{classData.class_name}
+          p
+            strong Khóa học: 
+            a(href=`/admin/courses/${classData.course_id._id}`) #{classData.course_id.title}
+          p
+            strong Giảng viên: 
+            span #{classData.instructor_id && classData.instructor_id.fullName || 'Chưa cập nhật'}
+        .col-md-6
+          - const enrolledCount = enrollments ? enrollments.length : 0
+          p
+            strong Sĩ số: 
+            span #{enrolledCount}/#{classData.max_students}
+          p
+            strong Ngày khai giảng: 
+            span #{classData.start_date ? new Date(classData.start_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+          p
+            strong Địa điểm: 
+            span #{classData.location || 'Chưa cập nhật'}
+
+  // Danh sách học viên
+  .card
+    .card-header
+      h5.mb-0 Học viên đã đăng ký
+    .card-body
+      if !enrollments || enrollments.length === 0
+        .text-center.py-4
+          i.fas.fa-inbox.fa-3x.text-muted.mb-3
+          h5.text-muted Chưa có học viên nào trong lớp
+      else
+        .table-responsive
+          table.table.table-striped.table-hover
+            thead.table-light
+              tr
+                th #
+                th Họ và tên
+                th Email
+                th Số điện thoại
+                th Ngày đăng ký
+            tbody
+              each enrollment, idx in enrollments
+                tr
+                  td #{idx + 1}
+                  td #{enrollment.student_id ? enrollment.student_id.fullName : 'Không rõ'}
+                  td #{enrollment.student_id ? enrollment.student_id.email : ''}
+                  td #{enrollment.student_id ? enrollment.student_id.phone : ''}
+                  td #{enrollment.createdAt ? new Date(enrollment.createdAt).toLocaleDateString('vi-VN') : ''}
+
+

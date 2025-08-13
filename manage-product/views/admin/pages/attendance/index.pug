@@ -1,0 +1,107 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Quản lý điểm danh
+
+  .row
+    .col-md-12
+      .card
+        .card-header
+          .d-flex.justify-content-between.align-items-center
+            h5.mb-0 Lớp học của tôi
+            .btn-group
+              a.btn.btn-outline-secondary(href="/admin/attendance/history") 
+                i.fas.fa-history.me-2
+                | Lịch sử điểm danh
+              a.btn.btn-outline-info(href="/admin/teaching-history") 
+                i.fas.fa-chart-line.me-2
+                | Thống kê giảng dạy
+
+        .card-body
+          if myClasses.length === 0
+            .text-center.py-5
+              i.fas.fa-chalkboard-teacher.fa-3x.text-muted.mb-3
+              h5.text-muted Bạn chưa được phân công lớp học nào
+              p.text-muted Liên hệ quản trị viên để được phân công lớp học
+
+          else
+            .row
+              each classItem in myClasses
+                .col-md-6.col-lg-4.mb-4
+                  .card.h-100
+                    .card-header
+                      .d-flex.justify-content-between.align-items-center
+                        h6.mb-0 #{classItem.class_name}
+                        if classItem.status === "ongoing"
+                          span.badge.bg-success Đang diễn ra
+                        else if classItem.status === "upcoming"
+                          span.badge.bg-warning Sắp khai giảng
+                        else
+                          span.badge.bg-secondary Đã kết thúc
+                    
+                    .card-body
+                      h6.card-title #{classItem.course_id.title}
+                      p.card-text
+                        small.text-muted
+                          i.fas.fa-calendar.me-1
+                          | #{classItem.start_date.toLocaleDateString('vi-VN')} - #{classItem.end_date.toLocaleDateString('vi-VN')}
+                      p.card-text
+                        small.text-muted
+                          i.fas.fa-clock.me-1
+                          | #{classItem.schedule}
+                      p.card-text
+                        small.text-muted
+                          i.fas.fa-users.me-1
+                          | #{classItem.enrolled_count}/#{classItem.max_students} học viên
+                      
+                      if classItem.location
+                        p.card-text
+                          small.text-muted
+                            i.fas.fa-map-marker-alt.me-1
+                            | #{classItem.location}
+
+                    .card-footer
+                      .d-grid.gap-2
+                        if classItem.status === "ongoing"
+                          a.btn.btn-success.btn-sm(href=`/admin/attendance/class/${classItem._id}`) 
+                            i.fas.fa-clipboard-check.me-1
+                            | Điểm danh
+                        a.btn.btn-outline-primary.btn-sm(href=`/admin/attendance/history/${classItem._id}`) 
+                          i.fas.fa-history.me-1
+                          | Lịch sử điểm danh
+                        a.btn.btn-outline-info.btn-sm(href=`/admin/classes/${classItem._id}/students`) 
+                          i.fas.fa-users.me-1
+                          | Danh sách học viên
+
+  // Quick stats
+  if stats
+    .row.mt-4
+      .col-md-3
+        .card.bg-primary.text-white
+          .card-body.text-center
+            h4 #{stats.total_classes}
+            small Tổng số lớp
+      .col-md-3
+        .card.bg-success.text-white
+          .card-body.text-center
+            h4 #{stats.ongoing_classes}
+            small Lớp đang diễn ra
+      .col-md-3
+        .card.bg-info.text-white
+          .card-body.text-center
+            h4 #{stats.total_students}
+            small Tổng học viên
+      .col-md-3
+        .card.bg-warning.text-white
+          .card-body.text-center
+            h4 #{stats.avg_attendance || 0}%
+            small Tỷ lệ điểm danh TB
+
+
+  script.
+    // Auto-refresh for ongoing classes
+    if document.querySelector('.badge.bg-success')) {
+      setTimeout(function() {
+        window.location.reload();
+      }, 60000); // Refresh every minute for ongoing classes
+    } 

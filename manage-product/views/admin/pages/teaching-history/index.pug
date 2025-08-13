@@ -1,0 +1,263 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Lịch sử giảng dạy
+
+  // Filter form
+  .card.mb-4
+    .card-header
+      h5.mb-0 Bộ lọc lịch sử
+    .card-body
+      form(action="/admin/teaching-history" method="GET")
+        .row
+          .col-md-3
+            label.form-label Từ ngày
+            input.form-control(type="date" name="start_date" value=query.start_date)
+          .col-md-3
+            label.form-label Đến ngày
+            input.form-control(type="date" name="end_date" value=query.end_date)
+          .col-md-3
+            label.form-label Khóa học
+            select.form-select(name="course_id")
+              option(value="") Tất cả khóa học
+              each course in courses
+                option(value=course._id selected=query.course_id == course._id.toString()) #{course.title}
+          .col-md-3
+            label.form-label &nbsp;
+            button.btn.btn-primary.w-100(type="submit") 
+              i.fas.fa-search.me-2
+              | Lọc
+
+  // Performance summary
+  if summary
+    .row.mb-4
+      .col-md-3
+        .card.bg-primary.text-white
+          .card-body.text-center
+            h4 #{summary.total_classes}
+            small Tổng số lớp đã dạy
+      .col-md-3
+        .card.bg-success.text-white
+          .card-body.text-center
+            h4 #{summary.total_students}
+            small Tổng học viên đã dạy
+      .col-md-3
+        .card.bg-info.text-white
+          .card-body.text-center
+            h4 #{summary.avg_attendance || 0}%
+            small Tỷ lệ điểm danh TB
+      .col-md-3
+        .card.bg-warning.text-white
+          .card-body.text-center
+            h4 #{summary.avg_rating || 0}/5
+            small Đánh giá TB
+
+  // Teaching history chart
+  if chartData
+    .card.mb-4
+      .card-header
+        h5.mb-0 Biểu đồ hiệu suất giảng dạy
+      .card-body
+        canvas#teachingChart(width="400" height="200")
+
+  // Classes history
+  .card
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Lịch sử các lớp đã dạy
+        .btn-group
+          a.btn.btn-outline-secondary(href="/admin/teaching-history/export") 
+            i.fas.fa-download.me-2
+            | Xuất báo cáo
+
+    .card-body
+      .table-responsive
+        table.table.table-striped
+          thead
+            tr
+              th Lớp học
+              th Khóa học
+              th Thời gian
+              th Sĩ số
+              th Tỷ lệ điểm danh
+              th Đánh giá TB
+              th Thao tác
+          tbody
+            each classItem in classes
+              tr
+                td
+                  strong #{classItem.class_code}
+                  br
+                  small.text-muted #{classItem.location}
+                td
+                  a(href=`/admin/courses/${classItem.course_id}`) #{classItem.course_title}
+                td
+                  div #{classItem.start_date.toLocaleDateString('vi-VN')} - #{classItem.end_date.toLocaleDateString('vi-VN')}
+                  small.text-muted #{classItem.schedule}
+                td
+                  span.badge.bg-info #{classItem.enrolled_count}/#{classItem.max_students}
+                td
+                  if classItem.attendance_rate
+                    span.badge.bg-success #{classItem.attendance_rate}%
+                  else
+                    span.badge.bg-secondary Chưa có dữ liệu
+                td
+                  if classItem.avg_rating
+                    .d-flex.align-items-center
+                      span.me-2 #{classItem.avg_rating.toFixed(1)}/5
+                      .text-warning
+                        - for (let i = 1; i <= 5; i++)
+                          if i <= classItem.avg_rating
+                            i.fas.fa-star
+                          else if i - 0.5 <= classItem.avg_rating
+                            i.fas.fa-star-half-alt
+                          else
+                            i.far.fa-star
+                  else
+                    span.text-muted Chưa có đánh giá
+                td
+                  .btn-group
+                    a.btn.btn-sm.btn-outline-primary(href=`/admin/teaching-history/${classItem._id}`) Chi tiết
+                    a.btn.btn-sm.btn-outline-info(href=`/admin/attendance/history/${classItem._id}`) Điểm danh
+                    a.btn.btn-sm.btn-outline-success(href=`/admin/classes/${classItem._id}/students`) Học viên
+
+      // Pagination
+      if pagination
+        include ../../mixins/pagination
+        +pagination(pagination)
+
+  // Recent reviews
+  if recentReviews && recentReviews.length > 0
+    .card.mt-4
+      .card-header
+        h5.mb-0 Đánh giá gần đây
+      .card-body
+        .row
+          each review in recentReviews
+            .col-md-6.mb-3
+              .card
+                .card-body
+                  .d-flex.justify-content-between.align-items-start
+                    div
+                      strong #{review.student_name}
+                      br
+                      small.text-muted #{review.course_title} - #{review.class_code}
+                    .text-warning
+                      - for (let i = 1; i <= 5; i++)
+                        if i <= review.rating
+                          i.fas.fa-star
+                        else
+                          i.far.fa-star
+                  p.mt-2.mb-0 #{review.comment}
+                  small.text-muted #{review.created_at.toLocaleDateString('vi-VN')}
+
+  // Performance insights
+  if insights
+    .row.mt-4
+      .col-md-6
+        .card
+          .card-header
+            h5.mb-0 Thống kê điểm danh
+          .card-body
+            .list-group.list-group-flush
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Tỷ lệ điểm danh cao nhất
+                span.badge.bg-success #{insights.best_attendance_rate}%
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Tỷ lệ điểm danh thấp nhất
+                span.badge.bg-danger #{insights.worst_attendance_rate}%
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Lớp có nhiều học viên nhất
+                span.badge.bg-primary #{insights.largest_class} học viên
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Tổng số buổi đã điểm danh
+                span.badge.bg-info #{insights.total_sessions} buổi
+
+      .col-md-6
+        .card
+          .card-header
+            h5.mb-0 Thống kê đánh giá
+          .card-body
+            .list-group.list-group-flush
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Đánh giá cao nhất
+                span.badge.bg-success #{insights.best_rating}/5
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Đánh giá thấp nhất
+                span.badge.bg-danger #{insights.worst_rating}/5
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Tổng số đánh giá
+                span.badge.bg-primary #{insights.total_reviews}
+              .list-group-item.d-flex.justify-content-between.align-items-center
+                |  Khóa học được đánh giá tốt nhất
+                span.badge.bg-warning #{insights.best_course}
+
+
+  script(src="https://cdn.jsdelivr.net/npm/chart.js")
+  script.
+    // Teaching performance chart
+    if (document.getElementById('teachingChart')) {
+      const ctx = document.getElementById('teachingChart').getContext('2d');
+      const chartData = !{JSON.stringify(chartData)};
+      
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: 'Tỷ lệ điểm danh (%)',
+            data: chartData.attendance,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            yAxisID: 'y'
+          }, {
+            label: 'Đánh giá trung bình',
+            data: chartData.ratings,
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            yAxisID: 'y1'
+          }]
+        },
+        options: {
+          responsive: true,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Thời gian'
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Tỷ lệ điểm danh (%)'
+              },
+              min: 0,
+              max: 100
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Đánh giá (1-5)'
+              },
+              min: 0,
+              max: 5,
+              grid: {
+                drawOnChartArea: false,
+              },
+            }
+          }
+        }
+      });
+    } 

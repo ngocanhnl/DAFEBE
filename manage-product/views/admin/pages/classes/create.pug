@@ -1,0 +1,572 @@
+
+//- extends ../../layouts/default
+
+//- block main
+//-   h1.mb-4 Thêm lớp học mới
+
+//-   .card
+//-     .card-header
+//-       h5.mb-0 Thông tin lớp học
+//-     .card-body
+//-       form(action="/admin/classes/create" method="POST")
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="class_name") Mã lớp học
+//-               input.form-control#class_code(type="text" name="class_name" required)
+//-               .form-text Mã lớp học duy nhất để phân biệt các lớp
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="course_id") Khóa học
+//-               select.form-select#course_id(name="course_id" required)
+//-                 option(value="") Chọn khóa học
+//-                 each course in courses
+//-                   option(value=course._id) #{course.title}
+
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="instructor_id") Giảng viên
+//-               select.form-select#instructor_id(name="instructor_id" required)
+//-                 option(value="") Chọn giảng viên
+//-                 each instructor in instructors
+//-                   option(value=instructor._id) #{instructor.fullName}
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="max_students") Sĩ số tối đa
+//-               input.form-control#max_students(type="number" name="max_students" min="1" required)
+
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="start_date") Ngày khai giảng
+//-               input.form-control#start_date(type="date" name="start_date" required)
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="end_date") Ngày kết thúc
+//-               input.form-control#end_date(type="date" name="end_date" required)
+
+//-         .mb-3
+//-           label.form-label Lịch học
+//-           #schedule-group
+//-             .schedule-row.mb-2.d-flex.gap-2
+//-               select.form-select(name="schedule[0][day]" required)
+//-                 option(value="") -- Chọn thứ --
+//-                 option(value="Monday") Thứ 2
+//-                 option(value="Tuesday") Thứ 3
+//-                 option(value="Wednesday") Thứ 4
+//-                 option(value="Thursday") Thứ 5
+//-                 option(value="Friday") Thứ 6
+//-                 option(value="Saturday") Thứ 7
+//-                 option(value="Sunday") Chủ nhật
+//-               input.form-control(type="time" name="schedule[0][start]" required)
+//-               input.form-control(type="time" name="schedule[0][end]" required)
+//-           button.btn.btn-sm.btn-outline-primary(type="button" id="add-schedule") + Thêm lịch học
+
+//-         .mb-3
+//-           label.form-label(for="location") Địa điểm học
+//-           input.form-control#location(type="text" name="location" placeholder="Địa chỉ hoặc phòng học")
+
+//-         .mb-3
+//-           label.form-label(for="description") Mô tả thêm
+//-           textarea.form-control#description(name="description" rows="3" placeholder="Thông tin bổ sung về lớp học")
+
+//-         .mb-3
+//-           label.form-label(for="status") Trạng thái
+//-           select.form-select#status(name="status" required)
+//-             option(value="upcoming") Sắp khai giảng
+//-             option(value="ongoing") Đang diễn ra
+//-             option(value="completed") Đã kết thúc
+
+//-         .d-flex.gap-2
+//-           button.btn.btn-primary(type="submit") Tạo lớp học
+//-           a.btn.btn-secondary(href="/admin/classes") Hủy
+
+//-   script.
+//-     // Date validation
+//-     document.getElementById('start_date').addEventListener('change', function() {
+//-       const startDate = this.value;
+//-       const endDateInput = document.getElementById('end_date');
+//-       endDateInput.min = startDate;
+//-     });
+
+//-     document.querySelector('form').addEventListener('submit', function(e) {
+//-       const startDate = document.getElementById('start_date').value;
+//-       const endDate = document.getElementById('end_date').value;
+//-       if (startDate && endDate && startDate > endDate) {
+//-         e.preventDefault();
+//-         alert('Ngày kết thúc phải sau ngày khai giảng!');
+//-         return false;
+//-       }
+//-     });
+
+//-     // Dynamic schedule add
+//-     const addBtn = document.getElementById("add-schedule");
+//-     const group = document.getElementById("schedule-group");
+//-     let scheduleIndex = 1;
+
+//-     addBtn.addEventListener("click", function() {
+//-       const row = document.createElement("div");
+//-       row.className = "schedule-row mb-2 d-flex gap-2";
+
+//-       row.innerHTML = `
+//-         <select class="form-select" name="schedule[${scheduleIndex}][day]" required>
+//-           <option value="">-- Chọn thứ --</option>
+//-           <option value="Monday">Thứ 2</option>
+//-           <option value="Tuesday">Thứ 3</option>
+//-           <option value="Wednesday">Thứ 4</option>
+//-           <option value="Thursday">Thứ 5</option>
+//-           <option value="Friday">Thứ 6</option>
+//-           <option value="Saturday">Thứ 7</option>
+//-           <option value="Sunday">Chủ nhật</option>
+//-         </select>
+//-         <input type="time" class="form-control" name="schedule[${scheduleIndex}][start]" required />
+//-         <input type="time" class="form-control" name="schedule[${scheduleIndex}][end]" required />
+//-       `;
+
+//-       group.appendChild(row);
+//-       scheduleIndex++;
+//-     });
+//- extends ../../layouts/default
+
+//- block main
+//-   h1.mb-4 Chỉnh sửa lớp học
+
+//-   .card
+//-     .card-header
+//-       h5.mb-0 Thông tin lớp học
+//-     .card-body
+//-       form(action=`/admin/classes/${classItem?._id || ''}/edit` method="POST")
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="class_name") Mã lớp học
+//-               input.form-control#class_code(type="text" name="class_name" required value=classItem?.class_name || '')
+//-               .form-text Mã lớp học duy nhất để phân biệt các lớp
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="course_id") Khóa học
+//-               select.form-select#course_id(name="course_id" required)
+//-                 option(value="") Chọn khóa học
+//-                 each course in courses
+//-                   option(value=course._id selected=course._id.toString() === classItem?.course_id?.toString()) #{course.title}
+
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="instructor_id") Giảng viên
+//-               select.form-select#instructor_id(name="instructor_id" required)
+//-                 option(value="") Chọn giảng viên
+//-                 each instructor in instructors
+//-                   option(value=instructor._id selected=instructor._id.toString() === classItem?.instructor_id?.toString()) #{instructor.fullName}
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="max_students") Sĩ số tối đa
+//-               input.form-control#max_students(type="number" name="max_students" min="1" required value=classItem?.max_students || '')
+
+//-         .row
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="start_date") Ngày khai giảng
+//-               input.form-control#start_date(type="date" name="start_date" required value=classItem?.start_date?.toISOString().slice(0,10) || '')
+
+//-           .col-md-6
+//-             .mb-3
+//-               label.form-label(for="end_date") Ngày kết thúc
+//-               input.form-control#end_date(type="date" name="end_date" required value=classItem?.end_date?.toISOString().slice(0,10) || '')
+
+//-         .mb-3
+//-           label.form-label Lịch học
+//-           #schedule-group
+//-             if classItem?.schedule?.length
+//-               each scheduleItem, i in classItem.schedule
+//-                 .schedule-row.mb-2.d-flex.gap-2
+//-                   select.form-select(name=`schedule[${i}][day]` required)
+//-                     option(value="") -- Chọn thứ --
+//-                     option(value="Monday" selected=scheduleItem.day==="Monday") Thứ 2
+//-                     option(value="Tuesday" selected=scheduleItem.day==="Tuesday") Thứ 3
+//-                     option(value="Wednesday" selected=scheduleItem.day==="Wednesday") Thứ 4
+//-                     option(value="Thursday" selected=scheduleItem.day==="Thursday") Thứ 5
+//-                     option(value="Friday" selected=scheduleItem.day==="Friday") Thứ 6
+//-                     option(value="Saturday" selected=scheduleItem.day==="Saturday") Thứ 7
+//-                     option(value="Sunday" selected=scheduleItem.day==="Sunday") Chủ nhật
+//-                   input.form-control(type="time" name=`schedule[${i}][start]` required value=scheduleItem.start)
+//-                   input.form-control(type="time" name=`schedule[${i}][end]` required value=scheduleItem.end)
+//-             else
+//-               .schedule-row.mb-2.d-flex.gap-2
+//-                 select.form-select(name="schedule[0][day]" required)
+//-                   option(value="") -- Chọn thứ --
+//-                   option(value="Monday") Thứ 2
+//-                   option(value="Tuesday") Thứ 3
+//-                   option(value="Wednesday") Thứ 4
+//-                   option(value="Thursday") Thứ 5
+//-                   option(value="Friday") Thứ 6
+//-                   option(value="Saturday") Thứ 7
+//-                   option(value="Sunday") Chủ nhật
+//-                 input.form-control(type="time" name="schedule[0][start]" required)
+//-                 input.form-control(type="time" name="schedule[0][end]" required)
+
+//-           button.btn.btn-sm.btn-outline-primary(type="button" id="add-schedule") + Thêm lịch học
+
+//-         .mb-3
+//-           label.form-label(for="location") Địa điểm học
+//-           input.form-control#location(type="text" name="location" value=classItem?.location || '')
+
+//-         .mb-3
+//-           label.form-label(for="description") Mô tả thêm
+//-           textarea.form-control#description(name="description" rows="3")= classItem?.description || ''
+
+//-         .mb-3
+//-           label.form-label(for="status") Trạng thái
+//-           select.form-select#status(name="status" required)
+//-             option(value="upcoming" selected=classItem?.status === 'upcoming') Sắp khai giảng
+//-             option(value="ongoing" selected=classItem?.status === 'ongoing') Đang diễn ra
+//-             option(value="completed" selected=classItem?.status === 'completed') Đã kết thúc
+
+//-         .d-flex.gap-2
+//-           button.btn.btn-primary(type="submit") Cập nhật lớp học
+//-           a.btn.btn-secondary(href="/admin/classes") Hủy
+
+//-   script.
+//-     // Date validation
+//-     document.getElementById('start_date').addEventListener('change', function() {
+//-       const startDate = this.value;
+//-       const endDateInput = document.getElementById('end_date');
+//-       endDateInput.min = startDate;
+//-     });
+
+//-     document.querySelector('form').addEventListener('submit', function(e) {
+//-       const startDate = document.getElementById('start_date').value;
+//-       const endDate = document.getElementById('end_date').value;
+//-       if (startDate && endDate && startDate > endDate) {
+//-         e.preventDefault();
+//-         alert('Ngày kết thúc phải sau ngày khai giảng!');
+//-         return false;
+//-       }
+//-     });
+
+//-     // Dynamic schedule add
+//-     const addBtn = document.getElementById("add-schedule");
+//-     const group = document.getElementById("schedule-group");
+//-     let scheduleIndex = #{classItem?.schedule?.length || 1};
+
+//-     addBtn.addEventListener("click", function() {
+//-       const row = document.createElement("div");
+//-       row.className = "schedule-row mb-2 d-flex gap-2";
+
+//-       row.innerHTML = `
+//-         <select class="form-select" name="schedule[${scheduleIndex}][day]" required>
+//-           <option value="">-- Chọn thứ --</option>
+//-           <option value="Monday">Thứ 2</option>
+//-           <option value="Tuesday">Thứ 3</option>
+//-           <option value="Wednesday">Thứ 4</option>
+//-           <option value="Thursday">Thứ 5</option>
+//-           <option value="Friday">Thứ 6</option>
+//-           <option value="Saturday">Thứ 7</option>
+//-           <option value="Sunday">Chủ nhật</option>
+//-         </select>
+//-         <input type="time" class="form-control" name="schedule[${scheduleIndex}][start]" required />
+//-         <input type="time" class="form-control" name="schedule[${scheduleIndex}][end]" required />
+//-       `;
+
+//-       group.appendChild(row);
+//-       scheduleIndex++;
+//-     });
+
+
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Thêm lớp học mới
+
+  .card
+    .card-header
+      h5.mb-0 Thông tin lớp học
+    .card-body
+      form(action="/admin/classes/create" method="POST")
+        .row
+          .col-md-6
+            .mb-3
+              label.form-label(for="class_name") Mã lớp học
+              input.form-control(type="text" name="class_name" required maxlength="50")
+              .form-text Mã lớp học duy nhất để phân biệt các lớp
+
+          .col-md-6
+            .mb-3
+              label.form-label(for="course_id") Khóa học
+              select.form-select(name="course_id" required)
+                option(value="") Chọn khóa học
+                each course in courses
+                  option(value=course._id) #{course.title}
+
+        .row
+          .col-md-6
+            .mb-3
+              label.form-label(for="instructor_id") Giảng viên
+              select.form-select(name="instructor_id" required)
+                option(value="") Chọn giảng viên
+                each instructor in instructors
+                  option(value=instructor._id) #{instructor.fullName}
+
+          .col-md-6
+            .mb-3
+              label.form-label(for="max_students") Sĩ số tối đa
+              input.form-control(type="number" name="max_students" min="1" max="100" required)
+
+        .row
+          .col-md-6
+            .mb-3
+              label.form-label Ngày khai giảng
+              input.form-control(type="date" name="start_date" required)
+
+          .col-md-6
+            .mb-3
+              label.form-label Ngày kết thúc
+              input.form-control(type="date" name="end_date" required)
+
+        .mb-3
+          label.form-label Lịch học
+          #schedule-group
+            .schedule-row.mb-2.d-flex.gap-2.align-items-center
+              select.form-select(name="schedule[0][day]" required)
+                option(value="") -- Chọn thứ --
+                option(value="Monday") Thứ 2
+                option(value="Tuesday") Thứ 3
+                option(value="Wednesday") Thứ 4
+                option(value="Thursday") Thứ 5
+                option(value="Friday") Thứ 6
+                option(value="Saturday") Thứ 7
+                option(value="Sunday") Chủ nhật
+              input.form-control(type="time" name="schedule[0][start]" required)
+              input.form-control(type="time" name="schedule[0][end]" required)
+              input.form-control(type="text" name="schedule[0][room]" placeholder="Phòng học" maxlength="20")
+          button.btn.btn-sm.btn-outline-primary(type="button" id="add-schedule") + Thêm lịch học
+
+        .mb-3
+          label.form-label(for="location") Địa điểm học
+          input.form-control(type="text" name="location" maxlength="100")
+
+        .mb-3
+          label.form-label(for="description") Mô tả thêm
+          textarea.form-control(name="description" rows="3" maxlength="500")
+
+        .mb-3
+          label.form-label(for="status") Trạng thái
+          select.form-select(name="status" required)
+            option(value="upcoming") Sắp khai giảng
+            option(value="ongoing") Đang diễn ra
+            option(value="completed") Đã kết thúc
+
+        .d-flex.gap-2
+          button.btn.btn-primary(type="submit") Tạo lớp học
+          a.btn.btn-secondary(href="/admin/classes") Hủy
+
+  script.
+    // Set min date for start_date
+    const startDateInput = document.querySelector('[name="start_date"]');
+    const endDateInput = document.querySelector('[name="end_date"]');
+    const today = new Date().toISOString().split('T')[0];
+    startDateInput.min = today;
+    
+    // Update end_date min when start_date changes
+    startDateInput.addEventListener('change', function() {
+      endDateInput.min = this.value;
+    });
+    
+    // Date validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+      const start = document.querySelector('[name="start_date"]').value;
+      const end = document.querySelector('[name="end_date"]').value;
+      if (start && end && start > end) {
+        e.preventDefault();
+        alert("Ngày kết thúc phải sau ngày khai giảng!");
+        return false;
+      }
+      
+      // Validate schedule
+      const scheduleRows = document.querySelectorAll('.schedule-row');
+      let hasValidSchedule = false;
+      
+      const scheduleData = [];
+      scheduleRows.forEach(row => {
+        const day = row.querySelector('select[name*="[day]"]').value;
+        const startTime = row.querySelector('input[name*="[start]"]').value;
+        const endTime = row.querySelector('input[name*="[end]"]').value;
+        
+        if (day && startTime && endTime && day !== "" && startTime !== "" && endTime !== "") {
+          if (startTime >= endTime) {
+            e.preventDefault();
+            alert("Thời gian kết thúc phải sau thời gian bắt đầu!");
+            return false;
+          }
+          
+
+          
+          // Check for duplicate schedules
+          const scheduleKey = `${day}-${startTime}-${endTime}`;
+          if (scheduleData.includes(scheduleKey)) {
+            e.preventDefault();
+            alert("Không được có lịch học trùng lặp!");
+            return false;
+          }
+          
+          // Check for overlapping time in the same day
+          const daySchedules = scheduleData.filter(key => key.startsWith(day));
+          for (const existingSchedule of daySchedules) {
+            const [, existingStart, existingEnd] = existingSchedule.split('-');
+            if ((startTime < existingEnd && endTime > existingStart)) {
+              e.preventDefault();
+              alert(`Có lịch học trùng thời gian trong ${day}!`);
+              return false;
+            }
+          }
+          
+          scheduleData.push(scheduleKey);
+          hasValidSchedule = true;
+        } else if ((day && day !== "") || (startTime && startTime !== "") || (endTime && endTime !== "")) {
+          // Nếu chỉ điền một phần thì báo lỗi
+          e.preventDefault();
+          alert("Vui lòng điền đầy đủ thông tin cho lịch học!");
+          return false;
+        }
+      });
+      
+      if (!hasValidSchedule) {
+        e.preventDefault();
+        alert("Vui lòng nhập ít nhất một lịch học!");
+        return false;
+      }
+      
+      // Validate max_students
+      const maxStudents = document.querySelector('[name="max_students"]').value;
+      if (!maxStudents || maxStudents < 1 || maxStudents > 100) {
+        e.preventDefault();
+        alert("Sĩ số tối đa phải từ 1 đến 100!");
+        return false;
+      }
+      
+      // Validate class_name
+      const className = document.querySelector('[name="class_name"]').value.trim();
+      if (className.length < 3) {
+        e.preventDefault();
+        alert("Mã lớp học phải có ít nhất 3 ký tự!");
+        return false;
+      }
+      if (className.length > 50) {
+        e.preventDefault();
+        alert("Mã lớp học không được quá 50 ký tự!");
+        return false;
+      }
+      
+      // Validate course_id and instructor_id
+      const courseId = document.querySelector('[name="course_id"]').value;
+      const instructorId = document.querySelector('[name="instructor_id"]').value;
+      if (!courseId || courseId === "") {
+        e.preventDefault();
+        alert("Vui lòng chọn khóa học!");
+        return false;
+      }
+      if (!instructorId || instructorId === "") {
+        e.preventDefault();
+        alert("Vui lòng chọn giảng viên!");
+        return false;
+      }
+      
+      // Validate dates
+      const startDate = document.querySelector('[name="start_date"]').value;
+      const endDate = document.querySelector('[name="end_date"]').value;
+      if (!startDate || startDate === "") {
+        e.preventDefault();
+        alert("Vui lòng chọn ngày khai giảng!");
+        return false;
+      }
+      if (!endDate || endDate === "") {
+        e.preventDefault();
+        alert("Vui lòng chọn ngày kết thúc!");
+        return false;
+      }
+      
+      // Check if start date is not in the past
+      const today = new Date().toISOString().split('T')[0];
+      if (startDate < today) {
+        e.preventDefault();
+        alert("Ngày khai giảng không thể là ngày trong quá khứ!");
+        return false;
+      }
+      
+      // Validate description length
+      const description = document.querySelector('[name="description"]').value.trim();
+      if (description.length > 500) {
+        e.preventDefault();
+        alert("Mô tả không được quá 500 ký tự!");
+        return false;
+      }
+      
+      // Validate status
+      const status = document.querySelector('[name="status"]').value;
+      if (!status || status === "") {
+        e.preventDefault();
+        alert("Vui lòng chọn trạng thái!");
+        return false;
+      }
+      
+      // Validate location length
+      const location = document.querySelector('[name="location"]').value.trim();
+      if (location.length > 100) {
+        e.preventDefault();
+        alert("Địa điểm học không được quá 100 ký tự!");
+        return false;
+      }
+      
+      // Validate room length for all schedule rows
+      const roomInputs = document.querySelectorAll('input[name*="[room]"]');
+      for (const roomInput of roomInputs) {
+        if (roomInput.value.trim().length > 20) {
+          e.preventDefault();
+          alert("Tên phòng học không được quá 20 ký tự!");
+          return false;
+        }
+      }
+    });
+
+    // Add more schedule rows
+    let scheduleIndex = 1;
+    document.getElementById('add-schedule').addEventListener('click', () => {
+      const row = document.createElement('div');
+      row.className = "schedule-row mb-2 d-flex gap-2 align-items-center";
+      row.innerHTML = `
+        <select class="form-select" name="schedule[${scheduleIndex}][day]" required>
+          <option value="">-- Chọn thứ --</option>
+          <option value="Monday">Thứ 2</option>
+          <option value="Tuesday">Thứ 3</option>
+          <option value="Wednesday">Thứ 4</option>
+          <option value="Thursday">Thứ 5</option>
+          <option value="Friday">Thứ 6</option>
+          <option value="Saturday">Thứ 7</option>
+          <option value="Sunday">Chủ nhật</option>
+        </select>
+        <input type="time" class="form-control" name="schedule[${scheduleIndex}][start]" required />
+        <input type="time" class="form-control" name="schedule[${scheduleIndex}][end]" required />
+        <input type="text" class="form-control" name="schedule[${scheduleIndex}][room]" placeholder="Phòng học" maxlength="20" />
+        <button type="button" class="btn btn-sm btn-outline-danger remove-schedule">×</button>
+      `;
+      document.getElementById('schedule-group').appendChild(row);
+      scheduleIndex++;
+    });
+
+    // Remove schedule row
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('remove-schedule')) {
+        const scheduleRows = document.querySelectorAll('.schedule-row');
+        if (scheduleRows.length > 1) {
+          e.target.closest('.schedule-row').remove();
+        } else {
+          alert('Phải có ít nhất một lịch học!');
+        }
+      }
+    });
