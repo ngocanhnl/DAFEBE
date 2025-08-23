@@ -52,8 +52,33 @@ const classSchema = new mongoose.Schema({
     lessons: [{
         lesson_name: { type: String, required: true },
         content: { type: String },
-        video_url: { type: String }
+        video_url: { type: String },
+        file: {
+            url: { type: String },
+            public_id: { type: String },
+            format: { type: String },
+            size: { type: Number },
+            original_name: { type: String }
+        }
     }],
+    // Thêm trường livestream
+    livestream: {
+        isLive: { type: Boolean, default: false },
+        youtubeUrl: String,
+        youtubeVideoId: String,
+        liveStartTime: Date,
+        liveEndTime: Date,
+        streamKey: String,
+        title: String,
+        description: String,
+        privacy: {
+            type: String,
+            enum: ['public', 'unlisted', 'private'],
+            default: 'unlisted'
+        },
+        chatEnabled: { type: Boolean, default: true },
+        recordingEnabled: { type: Boolean, default: true }
+    },
     deleted: {
         type: Boolean,
         default: false

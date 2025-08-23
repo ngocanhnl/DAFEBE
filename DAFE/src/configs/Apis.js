@@ -13,6 +13,10 @@ export const endpoints = {
 
     // Auth
     'login': '/login',
+    'register': '/register',
+    'verifyEmail': (token) => `/verify-email?token=${token}`,
+    'sendOtp': '/send-otp',
+    'verifyOtp': '/verify-otp',
     'profile': '/me',
     'updateProfile': '/me/update',
 
@@ -22,16 +26,36 @@ export const endpoints = {
     // Checkout
     'checkoutPreview': '/checkout/preview',
     'placeOrder': '/checkout/place-order',
+    'createPayment': '/checkout/create-payment',
 
     // Learning
     'myEnrollments': '/me/enrollments',
     'classDetail': (classId) => `/classes/${classId}`,
+
+    // Livestream
+    'debugLivestream': '/livestream/debug',
+    'myLivestreams': '/livestream/classes',
+    'classLivestream': (classId) => `/livestream/class/${classId}`,
+    'activeLivestreams': '/livestream/active',
+
+    // Class Transfer
+    'transferRequest': '/transfer-request',
+    'availableClasses': (classId) => `/available-classes/${classId}`,
+    'transferRequestDetail': (enrollmentId) => `/transfer-request/${enrollmentId}`,
+    'cancelTransferRequest': (enrollmentId) => `/transfer-request/${enrollmentId}`,
 };
 
 export const authApis = () => axios.create({
     baseURL: BASE_URL,
     headers: {
         'Authorization': `Bearer ${cookie.load('token')}`
+    }
+});
+
+export const VNpayApis = () => axios.create({
+    baseURL: 'http://localhost:8080/ApartManagement/api',
+    headers: {
+        'Content-Type': 'application/json'
     }
 });
 

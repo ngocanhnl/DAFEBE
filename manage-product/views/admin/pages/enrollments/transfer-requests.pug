@@ -1,0 +1,88 @@
+extends ../../layouts/default
+
+block main
+  h1.mb-4 Quản lý yêu cầu chuyển lớp
+
+  .card
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Danh sách yêu cầu chuyển lớp
+        .btn-group
+          a.btn.btn-outline-primary(href=`/${prefixAdmin}/enrollments/transfer-requests?status=pending`) Chờ duyệt
+          a.btn.btn-outline-warning(href=`/${prefixAdmin}/enrollments/transfer-requests?status=pending_teacher_approval`) Chờ giáo viên duyệt
+          a.btn.btn-outline-success(href=`/${prefixAdmin}/enrollments/transfer-requests?status=approved`) Đã duyệt
+          a.btn.btn-outline-danger(href=`/${prefixAdmin}/enrollments/transfer-requests?status=rejected`) Đã từ chối
+
+    .card-body
+      if transferRequests && transferRequests.length > 0
+        .table-responsive
+          table.table.table-striped
+            thead
+              tr
+                th Học viên
+                th Lớp hiện tại
+                th Lớp đích
+                th Lý do
+                th Ngày yêu cầu
+                th Trạng thái
+                th Người duyệt
+                th Thao tác
+            tbody
+              each request in transferRequests
+                tr
+                  td
+                    strong= request.student_id.fullName
+                    br
+                    small.text-muted= request.student_id.email
+                  td
+                    strong= request.class_id.class_name
+                    br
+                    small.text-muted= request.class_id.status
+                  td
+                    strong= request.transfer_request.target_class_id.class_name
+                    br
+                    small.text-muted= request.transfer_request.target_class_id.status
+                  td
+                    span= request.transfer_request.reason || 'Không có'
+                  td
+                    span= moment(request.transfer_request.requested_date).format('DD/MM/YYYY HH:mm')
+                  td
+                    if request.transfer_request.status === 'pending'
+                      span.badge.badge-warning Chờ duyệt
+                    else if request.transfer_request.status === 'pending_teacher_approval'
+                      span.badge.badge-info Chờ giáo viên duyệt
+                    else if request.transfer_request.status === 'approved'
+                      span.badge.badge-success Đã duyệt
+                    else if request.transfer_request.status === 'rejected'
+                      span.badge.badge-danger Đã từ chối
+                  td
+                    if request.transfer_request.approved_by
+                      span= request.transfer_request.approved_by.fullName
+                      br
+                      small.text-muted= moment(request.transfer_request.approved_date).format('DD/MM/YYYY HH:mm')
+                    else
+                      span.text-muted Chưa duyệt
+                  td
+                    a.btn.btn-sm.btn-info(href=`/${prefixAdmin}/enrollments/transfer-requests/${request._id}`) Chi tiết
+      else
+        .alert.alert-info Không có yêu cầu chuyển lớp nào
+
+      if pagination && pagination.totalPages > 1
+        +pagination(pagination)
+
+  script.
+    // Xử lý filter theo status
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const status = urlParams.get('status');
+      
+      if (status) {
+        const buttons = document.querySelectorAll('.btn-group .btn');
+        buttons.forEach(btn => {
+          btn.classList.remove('active');
+          if (btn.href.includes(`status=${status}`)) {
+            btn.classList.add('active');
+          }
+        });
+      }
+    });

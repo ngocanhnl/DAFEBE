@@ -1,0 +1,673 @@
+extends ../../layouts/default.pug
+
+block main
+  h1(class="mb-4") Livestream - #{classData.class_name}
+  if !youtubeConnected
+    .alert.alert-warning
+      | YouTube chưa được kết nối. 
+      a(href='/admin/livestream/auth/connect') Bấm vào đây để kết nối YouTube
+      |  trước khi tạo livestream.
+
+  .row
+    .col-md-8
+      .card.mb-3
+        .card-header
+          h5.mb-0 Video Livestream
+        .card-body
+          if classData.livestream && classData.livestream.youtubeVideoId
+            .ratio.ratio-16x9
+              iframe(
+                src=`https://www.youtube.com/embed/${classData.livestream.youtubeVideoId}?autoplay=1&mute=0`
+                title="Livestream"
+                frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              )
+            hr
+            h6(class="mt-3") Truyền trực tiếp qua trình duyệt (WebRTC - thử nghiệm)
+            p.small.text-muted Sử dụng nếu không phát qua phần mềm encoder. Chỉ hỗ trợ camera/micro cơ bản.
+            //- .d-flex.gap-2.flex-wrap
+            //-   button.btn.btn-outline-primary#btnStartWebRtc(onclick="startWebRtc()") Bắt đầu phát (Browser)
+            //-   button.btn.btn-outline-secondary#btnStopWebRtc(onclick="stopWebRtc()") Dừng phát
+            .d-flex.gap-2.flex-wrap
+              button.btn.btn-outline-primary#btnStartCamera(onclick="startWebRtc('camera')") Phát bằng Camera
+              button.btn.btn-outline-info#btnStartScreen(onclick="startWebRtc('screen')") Phát bằng Màn hình
+              button.btn.btn-outline-secondary#btnStopWebRtc(onclick="stopWebRtc()") Dừng phát
+
+            video#preview(autoplay playsinline muted style="width:100%;max-height:240px;margin-top:8px;border-radius:8px;background:#000")
+          else
+            .text-center.py-5
+              i.fas.fa-video.fa-3x.text-muted.mb-3
+              p.text-muted Chưa có livestream cho lớp học này
+              button.btn.btn-primary(onclick="createLivestream()") Tạo Livestream
+
+    .col-md-4
+      .card.mb-3
+        .card-header
+          h5.mb-0 Thông tin Livestream
+        .card-body
+          if classData.livestream && classData.livestream.youtubeVideoId
+            .mb-3
+              strong Trạng thái: 
+              if classData.livestream.isLive
+                span.badge.bg-danger Đang Live
+              else
+                span.badge.bg-secondary Đã dừng
+            
+            .mb-3
+              strong Lượt xem: 
+              span#viewCount #{classData.livestream.viewCount || 0}
+            
+            .mb-3
+              strong Ngày tạo: 
+              span #{moment(classData.livestream.liveStartTime).format("DD/MM/YYYY HH:mm")}
+            
+            .mb-3
+              strong Link YouTube: 
+              a(href=classData.livestream.youtubeUrl target="_blank") Xem trên YouTube
+            
+            if classData.livestream.streamKey
+              .mb-3
+                strong Stream Key: 
+                .input-group
+                  input.form-control#streamKey(
+                    type="text" 
+                    value=classData.livestream.streamKey 
+                    readonly
+                  )
+                  button.btn.btn-outline-secondary(
+                    type="button"
+                    onclick="copyStreamKey()"
+                  )
+                    i.fas.fa-copy
+            
+            .d-grid.gap-2
+              if classData.livestream.isLive
+                button.btn.btn-warning(onclick="stopLivestream()")
+                  i.fas.fa-stop.me-2
+                  | Dừng Livestream
+              else
+                button.btn.btn-success(onclick="startLivestream()")
+                  i.fas.fa-play.me-2
+                  | Bắt đầu Livestream
+              button.btn.btn-outline-danger(onclick="resetLivestream()")
+                i.fas.fa-undo.me-2
+                | Reset livestream
+              
+              button.btn.btn-info(onclick="refreshStatus()")
+                i.fas.fa-sync.me-2
+                | Làm mới trạng thái
+          else
+            .text-center
+              p.text-muted Chưa có thông tin livestream
+              button.btn.btn-primary(onclick="createLivestream()") Tạo Livestream
+
+      .card
+        .card-header
+          h5.mb-0 Thông tin lớp học
+        .card-body
+          p
+            strong Lớp: 
+            span #{classData.class_name}
+          p
+            strong Khóa học: 
+            span #{classData.course_id.title}
+          p
+            strong Giảng viên: 
+            span #{classData.instructor_id.fullName}
+          p
+            strong Trạng thái: 
+            span.badge(class=classData.status === 'ongoing' ? 'bg-success' : 'bg-warning') #{classData.status}
+
+  // Modal tạo livestream
+  .modal.fade#createLivestreamModal(tabindex="-1")
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title Tạo Livestream mới
+          button.btn-close(type="button" data-bs-dismiss="modal")
+        .modal-body
+          form#createLivestreamForm
+            .mb-3
+              label.form-label Tiêu đề
+              input.form-control#livestreamTitle(
+                type="text"
+                value=`${classData.class_name} - ${classData.course_id.title}`
+                required
+              )
+            .mb-3
+              label.form-label Mô tả
+              textarea.form-control#livestreamDescription(
+                rows="3"
+                placeholder="Mô tả livestream..."
+              )
+            .mb-3
+              label.form-label Quyền riêng tư
+              select.form-control#livestreamPrivacy
+                option(value="unlisted") Không công khai (Unlisted)
+                option(value="private") Riêng tư (Private)
+                option(value="public") Công khai (Public)
+            .modal-footer
+              button.btn.btn-secondary(type="button" data-bs-dismiss="modal") Hủy
+              button.btn.btn-primary(type="submit") Tạo Livestream
+  script(src="/socket.io/socket.io.js")
+  script.
+    // ========== WebRTC Broadcaster (Teacher) via Socket.IO ===========
+    const LS_CLASS_ID = "#{classData._id}";
+    const nsp = io('/livestream');
+    let localStream = null;
+    const watcherPeers = new Map(); // watcherId -> RTCPeerConnection
+
+    //- function startWebRtc() {
+    //-   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    //-     return alert('Trình duyệt không hỗ trợ getUserMedia');
+    //-   }
+    //-   if (localStream) return;
+    //-   navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    //-     .then((stream) => {
+    //-       localStream = stream;
+    //-       const videoEl = document.getElementById('preview');
+    //-       if (videoEl) videoEl.srcObject = localStream;
+
+    //-       nsp.emit('join', { classId: LS_CLASS_ID, as: 'broadcaster' });
+
+    //-       nsp.on('watcher_joined', async ({ watcherId }) => {
+    //-         const pc = createPeerConnection(watcherId);
+    //-         localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    //-         const offer = await pc.createOffer();
+    //-         await pc.setLocalDescription(offer);
+    //-         nsp.emit('offer', { watcherId, description: pc.localDescription });
+    //-       });
+
+    //-       //- nsp.on('answer', async ({ description, from }) => {
+    //-       //-   const pc = watcherPeers.get(from);
+    //-       //-   if (pc) await pc.setRemoteDescription(description);
+    //-       //- });
+    //-       nsp.on('answer', async ({ description, from }) => {
+    //-       const pc = watcherPeers.get(from);
+    //-       if (pc) {
+    //-         if (!pc.currentRemoteDescription && pc.signalingState === "have-local-offer") {
+    //-           try {
+    //-             await pc.setRemoteDescription(description);
+    //-           } catch (err) {
+    //-             console.error("Lỗi setRemoteDescription:", err);
+    //-           }
+    //-         } else {
+    //-           console.warn("Bỏ qua answer, state:", pc.signalingState);
+    //-         }
+    //-       }
+    //-     });
+
+
+    //-       nsp.on('candidate', ({ candidate, from }) => {
+    //-         const pc = watcherPeers.get(from);
+    //-         if (pc && candidate) pc.addIceCandidate(candidate).catch(()=>{});
+    //-       });
+
+    //-       nsp.on('broadcaster_left', () => {});
+    //-     })
+    //-     .catch((err) => {
+    //-       console.error(err);
+    //-       alert('Không thể truy cập camera/micro: ' + err.message);
+    //-     });
+    //- }
+    //- function startWebRtc(mode = 'camera') {
+    //-   if (!navigator.mediaDevices) {
+    //-     return alert('Trình duyệt không hỗ trợ WebRTC');
+    //-   }
+    //-   if (localStream) return;
+
+    //-   let getStreamPromise;
+    //-   if (mode === 'camera') {
+    //-     getStreamPromise = navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    //-   } else if (mode === 'screen') {
+    //-     getStreamPromise = navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    //-   }
+
+    //-   getStreamPromise.then((stream) => {
+    //-     localStream = stream;
+    //-     const videoEl = document.getElementById('preview');
+    //-     if (videoEl) videoEl.srcObject = localStream;
+
+    //-     nsp.emit('join', { classId: LS_CLASS_ID, as: 'broadcaster' });
+
+    //-     nsp.on('watcher_joined', async ({ watcherId }) => {
+    //-       const pc = createPeerConnection(watcherId);
+    //-       localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    //-       const offer = await pc.createOffer();
+    //-       await pc.setLocalDescription(offer);
+    //-       nsp.emit('offer', { watcherId, description: pc.localDescription });
+    //-     });
+
+    //-     nsp.on('answer', async ({ description, from }) => {
+    //-       const pc = watcherPeers.get(from);
+    //-       if (pc && !pc.currentRemoteDescription) {
+    //-         try {
+    //-           await pc.setRemoteDescription(description);
+    //-         } catch (err) {
+    //-           console.error("Lỗi setRemoteDescription:", err);
+    //-         }
+    //-       }
+    //-     });
+
+    //-     nsp.on('candidate', ({ candidate, from }) => {
+    //-       const pc = watcherPeers.get(from);
+    //-       if (pc && candidate) pc.addIceCandidate(candidate).catch(()=>{});
+    //-     });
+
+    //-     // Nếu share màn hình và user dừng -> tự động stop stream
+    //-     if (mode === 'screen') {
+    //-       const [videoTrack] = stream.getVideoTracks();
+    //-       if (videoTrack) {
+    //-         videoTrack.addEventListener('ended', () => {
+    //-           alert('Bạn đã dừng chia sẻ màn hình');
+    //-           stopWebRtc();
+    //-         });
+    //-       }
+    //-     }
+    //-   }).catch((err) => {
+    //-     console.error(err);
+    //-     alert('Không thể truy cập media: ' + err.message);
+    //-   });
+    //- }
+    async function startWebRtc(mode = 'camera') {
+      if (!navigator.mediaDevices) {
+        return alert('Trình duyệt không hỗ trợ WebRTC');
+      }
+      if (localStream) return;
+
+      try {
+        let stream;
+        if (mode === 'camera') {
+          // Camera + mic
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } else if (mode === 'screen') {
+          // 1. Lấy màn hình
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+          // 2. Lấy mic
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // 3. Ghép video (screen) + audio (mic)
+          stream = new MediaStream([
+            ...screenStream.getVideoTracks(),
+            ...micStream.getAudioTracks()
+          ]);
+
+          // Nếu dừng share màn hình thì stop luôn
+          const [videoTrack] = screenStream.getVideoTracks();
+          if (videoTrack) {
+            videoTrack.addEventListener('ended', () => {
+              alert('Bạn đã dừng chia sẻ màn hình');
+              stopWebRtc();
+            });
+          }
+        }
+
+        localStream = stream;
+        const videoEl = document.getElementById('preview');
+        if (videoEl) videoEl.srcObject = localStream;
+
+        nsp.emit('join', { classId: LS_CLASS_ID, as: 'broadcaster' });
+
+        nsp.on('watcher_joined', async ({ watcherId }) => {
+          const pc = createPeerConnection(watcherId);
+          localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          nsp.emit('offer', { watcherId, description: pc.localDescription });
+        });
+
+        nsp.on('answer', async ({ description, from }) => {
+          const pc = watcherPeers.get(from);
+          if (pc && !pc.currentRemoteDescription) {
+            try {
+              await pc.setRemoteDescription(description);
+            } catch (err) {
+              console.error("Lỗi setRemoteDescription:", err);
+            }
+          }
+        });
+
+        nsp.on('candidate', ({ candidate, from }) => {
+          const pc = watcherPeers.get(from);
+          if (pc && candidate) pc.addIceCandidate(candidate).catch(()=>{});
+        });
+      } catch (err) {
+        console.error("Lỗi khi startWebRtc:", err);
+        alert("Không thể truy cập media: " + err.message);
+      }
+    }
+
+
+    function stopWebRtc() {
+      nsp.emit('leave');
+      watcherPeers.forEach((pc) => pc.close());
+      watcherPeers.clear();
+      if (localStream) {
+        localStream.getTracks().forEach(t => t.stop());
+        localStream = null;
+        const videoEl = document.getElementById('preview');
+        if (videoEl) videoEl.srcObject = null;
+      }
+    }
+
+    function createPeerConnection(watcherId) {
+      const pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' }
+        ]
+      });
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          nsp.emit('candidate', { to: watcherId, candidate: e.candidate });
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        if (["disconnected","failed","closed"].includes(pc.connectionState)) {
+          pc.close();
+          watcherPeers.delete(watcherId);
+        }
+      };
+      watcherPeers.set(watcherId, pc);
+      return pc;
+    }
+    //- function createLivestream() {
+    //-   console.log("createLivestream");
+    //-   const modalEl = document.getElementById('createLivestreamModal');
+    //-   if (!modalEl) {
+    //-     console.error("Modal không tồn tại!");
+    //-     return;
+    //-   }
+    //-   const modal = new bootstrap.Modal(modalEl);
+    //-   modal.show();
+    //- }
+
+    //-   const formEl = document.getElementById('createLivestreamForm');
+    //-   console.log(formEl);
+    //- if (formEl) {
+    //-   console.log("createLivestreamForm1");
+    //-   formEl.addEventListener('submit', async function (e) {
+    //-     console.log("createLivestreamForm2");
+    //-     e.preventDefault();
+
+    //-     const formData = {
+    //-       title: document.getElementById('livestreamTitle')?.value || "",
+    //-       description: document.getElementById('livestreamDescription')?.value || "",
+    //-       privacy: document.getElementById('livestreamPrivacy')?.value || "public"
+    //-     };
+
+    //-     try {
+    //-       const res = await fetch(`/admin/livestream/${encodeURIComponent("#{classData._id}")}/create`, {
+    //-         method: "POST",
+    //-         headers: { "Content-Type": "application/json" },
+    //-         body: JSON.stringify(formData)
+    //-       });
+
+    //-       const text = await res.text(); // lấy raw text
+    //-       let data;
+    //-       try {
+    //-         data = JSON.parse(text); // thử parse JSON
+    //-       } catch (err) {
+    //-         throw new Error("Server không trả JSON, phản hồi là: " + text);
+    //-       }
+
+    //-       if (data.success) {
+    //-         alert(data.message || "Tạo livestream thành công!");
+    //-         window.location.reload();
+    //-       } else {
+    //-         alert(data.message || "Không thể tạo livestream.");
+    //-       }
+    //-     } catch (err) {
+    //-       console.error("❌ Lỗi khi tạo livestream:", err);
+    //-       alert("Có lỗi xảy ra: " + err.message);
+    //-     }
+    //-   });
+    //- }
+
+    
+
+    //- function refreshStatus() {
+    //-   fetch(`/admin/livestream/#{classData._id}/status`)
+    //-     .then(res => res.json())
+    //-     .then(data => {
+    //-       if (data.success) {
+    //-         const viewCountEl = document.getElementById('viewCount');
+    //-         if (viewCountEl && data.data.viewCount !== undefined) {
+    //-           viewCountEl.textContent = data.data.viewCount;
+    //-         }
+    //-         const statusEl = document.getElementById('status');
+    //-         if (statusEl && data.data.status !== undefined) {
+    //-           statusEl.textContent = data.data.status;
+    //-         }
+    //-         const likeCountEl = document.getElementById('likeCount');
+    //-         if (likeCountEl && data.data.likeCount !== undefined) {
+    //-           likeCountEl.textContent = data.data.likeCount;
+    //-         }
+    //-       }
+    //-     })
+    //-     .catch(err => console.error("❌ refreshStatus error:", err));
+    //- }
+
+    //- // Auto refresh mỗi 30 giây (chỉ 1 lần)
+    //- setInterval(refreshStatus, 30000);
+
+    //- function copyStreamKey() {
+    //-   const streamKey = document.getElementById('streamKey');
+    //-   if (streamKey) {
+    //-     streamKey.select();
+    //-     document.execCommand('copy');
+    //-     alert('Đã copy stream key vào clipboard!');
+    //-   }
+    //- }
+
+    //-  function startLivestream() {
+    //-   if (confirm('Bạn có chắc muốn bắt đầu livestream?')) {
+    //-     fetch(`/admin/livestream/#{classData._id}/start`, {
+    //-       method: 'POST',
+    //-       headers: {
+    //-         'Content-Type': 'application/json',
+    //-       }
+    //-     })
+    //-     .then(response => response.json())
+    //-     .then(data => {
+    //-       if (data.success) {
+    //-         alert(data.message);
+    //-         window.location.reload();
+    //-       } else {
+    //-         alert(data.message);
+    //-       }
+    //-     })
+    //-     .catch(error => {
+    //-       console.error('Error:', error);
+    //-       alert('Có lỗi xảy ra khi bắt đầu livestream');
+    //-     });
+    //-   }
+    //- }
+
+    //- function stopLivestream() {
+    //-   if (confirm('Bạn có chắc muốn dừng livestream?')) {
+    //-     fetch(`/admin/livestream/#{classData._id}/stop`, {
+    //-       method: 'POST',
+    //-       headers: {
+    //-         'Content-Type': 'application/json',
+    //-       }
+    //-     })
+    //-     .then(response => response.json())
+    //-     .then(data => {
+    //-       if (data.success) {
+    //-         alert(data.message);
+    //-         window.location.reload();
+    //-       } else {
+    //-         alert(data.message);
+    //-       }
+    //-     })
+    //-     .catch(error => {
+    //-       console.error('Error:', error);
+    //-       alert('Có lỗi xảy ra khi dừng livestream');
+    //-     });
+    //-   }
+    //- }
+
+    //- function resetLivestream() {
+    //-   if (confirm('Reset sẽ xóa livestream cũ và cho phép tạo livestream mới. Tiếp tục?')) {
+    //-     fetch(`/admin/livestream/#{classData._id}/reset`, {
+    //-       method: 'POST',
+    //-       headers: {
+    //-         'Content-Type': 'application/json',
+    //-       }
+    //-     })
+    //-     .then(response => response.json())
+    //-     .then(data => {
+    //-       if (data.success) {
+    //-         alert(data.message);
+    //-         window.location.reload();
+    //-       } else {
+    //-         alert(data.message || 'Không thể reset livestream');
+    //-       }
+    //-     })
+    //-     .catch(error => {
+    //-       console.error('Error:', error);
+    //-       alert('Có lỗi xảy ra khi reset livestream');
+    //-     });
+    //-   }
+    //- }
+    //- script(src="/socket.io/socket.io.js")
+
+  script.
+    function createLivestream() {
+      const modal = new bootstrap.Modal(document.getElementById('createLivestreamModal'));
+      modal.show();
+    }
+
+    document.getElementById('createLivestreamForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const formData = {
+        title: document.getElementById('livestreamTitle').value,
+        description: document.getElementById('livestreamDescription').value,
+        privacy: document.getElementById('livestreamPrivacy').value
+      };
+
+      fetch(`/admin/livestream/#{classData._id}/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert(data.message);
+          window.location.reload();
+        } else {
+          alert(data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi tạo livestream');
+      });
+    });
+
+    function startLivestream() {
+      if (confirm('Bạn có chắc muốn bắt đầu livestream?')) {
+        fetch(`/admin/livestream/#{classData._id}/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi bắt đầu livestream');
+        });
+      }
+    }
+
+    function stopLivestream() {
+      if (confirm('Bạn có chắc muốn dừng livestream?')) {
+        fetch(`/admin/livestream/#{classData._id}/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi dừng livestream');
+        });
+      }
+    }
+
+    //- function refreshStatus() {
+    //-   fetch(`/admin/livestream/#{classData._id}/status`)
+    //-     .then(response => response.json())
+    //-     .then(data => {
+    //-       if (data.success) {
+    //-         document.getElementById('viewCount').textContent = data.data.viewCount;
+    //-         // Có thể cập nhật thêm thông tin khác
+    //-       }
+    //-     })
+    //-     .catch(error => {
+    //-       console.error('Error:', error);
+    //-     });
+    //- }
+    function refreshStatus() {
+    fetch(`/admin/livestream/#{classData._id}/status`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const viewCountEl = document.getElementById('viewCount');
+          const statusEl = document.getElementById('status');
+          const likeCountEl = document.getElementById('likeCount');
+          const commentCountEl = document.getElementById('commentCount');
+
+          if (viewCountEl && data.data.viewCount !== undefined) {
+            viewCountEl.textContent = data.data.viewCount;
+          }
+          if (statusEl && data.data.status !== undefined) {
+            statusEl.textContent = data.data.status;
+          }
+          if (likeCountEl && data.data.likeCount !== undefined) {
+            likeCountEl.textContent = data.data.likeCount;
+          }
+          if (commentCountEl && data.data.commentCount !== undefined) {
+            commentCountEl.textContent = data.data.commentCount;
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+      });
+    }
+
+    // gọi lại mỗi 10 giây
+    setInterval(refreshStatus, 10000);
+
+    function copyStreamKey() {
+      const streamKey = document.getElementById('streamKey');
+      streamKey.select();
+      document.execCommand('copy');
+      alert('Đã copy stream key vào clipboard!');
+    }
+
+    // Auto refresh status every 30 seconds
+    setInterval(refreshStatus, 30000);

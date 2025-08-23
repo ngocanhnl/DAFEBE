@@ -1,0 +1,258 @@
+extends ../../layouts/default
+//- extends layouts/default
+
+block main
+  .d-flex.justify-content-between.align-items-center.mb-4
+    h1 Chi tiết yêu cầu chuyển lớp
+    a.btn.btn-secondary(href=`/${prefixAdmin}/enrollments/transfer-requests`) ← Quay lại
+
+  .row
+    .col-md-6
+      .card.mb-4
+        .card-header
+          h5 Thông tin học viên
+        .card-body
+          .row
+            .col-sm-4
+              strong Họ tên:
+            .col-sm-8
+              span= enrollment.student_id.fullName
+          .row.mt-2
+            .col-sm-4
+              strong Email:
+            .col-sm-8
+              span= enrollment.student_id.email
+          .row.mt-2
+            .col-sm-4
+              strong Số điện thoại:
+            .col-sm-8
+              span= enrollment.student_id.phone || 'Chưa cập nhật'
+
+    .col-md-6
+      .card.mb-4
+        .card-header
+          h5 Thông tin yêu cầu
+        .card-body
+          .row
+            .col-sm-4
+              strong Ngày yêu cầu:
+            .col-sm-8
+              span= moment(enrollment.transfer_request.requested_date).format('DD/MM/YYYY HH:mm')
+          .row.mt-2
+            .col-sm-4
+              strong Lý do:
+            .col-sm-8
+              span= enrollment.transfer_request.reason || 'Không có'
+          .row.mt-2
+            .col-sm-4
+              strong Trạng thái:
+            .col-sm-8
+              if enrollment.transfer_request.status === 'pending'
+                span.badge.badge-warning Chờ duyệt
+              else if enrollment.transfer_request.status === 'pending_teacher_approval'
+                span.badge.badge-info Chờ giáo viên duyệt
+              else if enrollment.transfer_request.status === 'approved'
+                span.badge.badge-success Đã duyệt
+              else if enrollment.transfer_request.status === 'rejected'
+                span.badge.badge-danger Đã từ chối
+
+  .row
+    .col-md-6
+      .card.mb-4
+        .card-header
+          h5 Lớp học hiện tại
+        .card-body
+          .row
+            .col-sm-4
+              strong Tên lớp:
+            .col-sm-8
+              span= enrollment.class_id.class_name
+          .row.mt-2
+            .col-sm-4
+              strong Trạng thái:
+            .col-sm-8
+              span.badge(class=`badge-${enrollment.class_id.status === 'ongoing' ? 'success' : 'info'}`)= enrollment.class_id.status
+          .row.mt-2
+            .col-sm-4
+              strong Ngày bắt đầu:
+            .col-sm-8
+              span= moment(enrollment.class_id.start_date).format('DD/MM/YYYY')
+          .row.mt-2
+            .col-sm-4
+              strong Ngày kết thúc:
+            .col-sm-8
+              span= moment(enrollment.class_id.end_date).format('DD/MM/YYYY')
+
+    .col-md-6
+      .card.mb-4
+        .card-header
+          h5 Lớp học đích
+        .card-body
+          .row
+            .col-sm-4
+              strong Tên lớp:
+            .col-sm-8
+              span= enrollment.transfer_request.target_class_id.class_name
+          .row.mt-2
+            .col-sm-4
+              strong Trạng thái:
+            .col-sm-8
+              span.badge(class=`badge-${enrollment.transfer_request.target_class_id.status === 'ongoing' ? 'success' : 'info'}`)= enrollment.transfer_request.target_class_id.status
+          .row.mt-2
+            .col-sm-4
+              strong Ngày bắt đầu:
+            .col-sm-8
+              span= moment(enrollment.transfer_request.target_class_id.start_date).format('DD/MM/YYYY')
+          .row.mt-2
+            .col-sm-4
+              strong Ngày kết thúc:
+            .col-sm-8
+              span= moment(enrollment.transfer_request.target_class_id.end_date).format('DD/MM/YYYY')
+          .row.mt-2
+            .col-sm-4
+              strong Chỗ trống:
+            .col-sm-8
+              span.badge.badge-info= availableSlots
+
+  if enrollment.transfer_request.status === 'pending'
+    .card.mt-4
+      .card-header
+        h5 Xử lý yêu cầu
+      .card-body
+        .row
+          .col-md-6
+            button.btn.btn-success.btn-lg.btn-block#approveBtn(data-id=enrollment._id)
+              i.fas.fa-check.mr-2
+              | Duyệt yêu cầu
+          .col-md-6
+            button.btn.btn-danger.btn-lg.btn-block#rejectBtn(data-id=enrollment._id)
+              i.fas.fa-times.mr-2
+              | Từ chối yêu cầu
+
+        .mt-3
+          .form-group
+            label(for="notes") Ghi chú:
+            textarea#notes.form-control(rows="3" placeholder="Nhập ghi chú (tùy chọn)")
+
+  if enrollment.transfer_request.status !== 'pending' && enrollment.transfer_request.approved_by
+    .card.mt-4
+      .card-header
+        h5 Thông tin xử lý
+      .card-body
+        .row
+          .col-sm-4
+            strong Người xử lý:
+          .col-sm-8
+            span= enrollment.transfer_request.approved_by.fullName || 'Admin'
+        .row.mt-2
+          .col-sm-4
+            strong Ngày xử lý:
+          .col-sm-8
+            span= moment(enrollment.transfer_request.approved_date).format('DD/MM/YYYY HH:mm')
+        if enrollment.transfer_request.notes
+          .row.mt-2
+            .col-sm-4
+              strong Ghi chú:
+            .col-sm-8
+              span= enrollment.transfer_request.notes
+
+  if enrollment.transfer_request.status === 'pending_teacher_approval'
+    .card.mt-4
+      .card-header
+        h5 Thông báo
+      .card-body
+        .alert.alert-info
+          i.fas.fa-info-circle.mr-2
+          | Yêu cầu đã được admin duyệt. Học viên cần được giáo viên phụ trách lớp đích duyệt để vào lớp.
+          br
+          | Vui lòng vào trang "Danh sách học viên" của lớp #{enrollment.transfer_request.target_class_id.class_name} để duyệt.
+
+  if enrollment.transfer_request.teacher_approved_by
+    .card.mt-4
+      .card-header
+        h5 Thông tin giáo viên duyệt
+      .card-body
+        .row
+          .col-sm-4
+            strong Giáo viên duyệt:
+          .col-sm-8
+            span= enrollment.transfer_request.teacher_approved_by.fullName || 'Giáo viên'
+        .row.mt-2
+          .col-sm-4
+            strong Ngày duyệt:
+          .col-sm-8
+            span= moment(enrollment.transfer_request.teacher_approved_date).format('DD/MM/YYYY HH:mm')
+        if enrollment.transfer_request.teacher_notes
+          .row.mt-2
+            .col-sm-4
+              strong Ghi chú giáo viên:
+            .col-sm-8
+              span= enrollment.transfer_request.teacher_notes
+
+
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      const approveBtn = document.getElementById('approveBtn');
+      const rejectBtn = document.getElementById('rejectBtn');
+      const notesTextarea = document.getElementById('notes');
+
+      if (approveBtn) {
+        approveBtn.addEventListener('click', function() {
+          const enrollmentId = this.getAttribute('data-id');
+          const notes = notesTextarea.value;
+
+          if (confirm('Bạn có chắc chắn muốn duyệt yêu cầu chuyển lớp này?')) {
+            fetch(`/admin/enrollments/transfer-requests/${enrollmentId}/approve`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ notes: notes })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert(data.message);
+                window.location.reload();
+              } else {
+                alert('Lỗi: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Có lỗi xảy ra khi xử lý yêu cầu');
+            });
+          }
+        });
+      }
+
+      if (rejectBtn) {
+        rejectBtn.addEventListener('click', function() {
+          const enrollmentId = this.getAttribute('data-id');
+          const notes = notesTextarea.value;
+
+          if (confirm('Bạn có chắc chắn muốn từ chối yêu cầu chuyển lớp này?')) {
+            fetch(`/admin/enrollments/transfer-requests/${enrollmentId}/reject`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ notes: notes })
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert(data.message);
+                window.location.reload();
+              } else {
+                alert('Lỗi: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Có lỗi xảy ra khi xử lý yêu cầu');
+            });
+          }
+        });
+      }
+    });

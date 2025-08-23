@@ -42,9 +42,13 @@ block main
     .card-header
       .d-flex.justify-content-between.align-items-center
         h5.mb-0 Danh sách lớp học
-        a.btn.btn-primary(href="/admin/classes/create") 
-          i.fas.fa-plus.me-2
-          | Thêm lớp học mới
+        .btn-group
+          a.btn.btn-primary(href="/admin/classes/create") 
+            i.fas.fa-plus.me-2
+            | Thêm lớp học mới
+          a.btn.btn-success(href="/admin/livestream/manage") 
+            i.fas.fa-video.me-2
+            | Quản lý Livestream
 
     .card-body
       // Filter form
@@ -85,6 +89,7 @@ block main
               th Thời gian
               th Sĩ số
               th Trạng thái
+              th Livestream
               th Thao tác
           tbody
             if classes
@@ -152,6 +157,20 @@ block main
                         i.fas.fa-question.me-1
                         | #{classItem.status}
                   td
+                    if classItem.livestream && classItem.livestream.youtubeVideoId
+                      if classItem.livestream.isLive
+                        span.badge.badge-danger
+                          i.fas.fa-broadcast-tower.me-1
+                          | Đang Live
+                      else
+                        span.badge.badge-secondary
+                          i.fas.fa-video.me-1
+                          | Có sẵn
+                    else
+                      span.badge.badge-light
+                        i.fas.fa-video-slash.me-1
+                        | Chưa có
+                  td
                     .btn-group
                       a.btn.btn-sm.btn-outline-primary(href=`/admin/classes/detail/${classItem._id}` title="Xem chi tiết")
                         i.fas.fa-eye
@@ -159,6 +178,8 @@ block main
                         i.fas.fa-edit
                       a.btn.btn-sm.btn-outline-info(href=`/admin/classes/${classItem._id}/students` title="Danh sách học viên")
                         i.fas.fa-users
+                      a.btn.btn-sm.btn-outline-success(href=`/admin/livestream/${classItem._id}` title="Livestream")
+                        i.fas.fa-video
                       button.btn.btn-sm.btn-outline-danger(
                         onclick=`deleteClass('${classItem._id}')` 
                         title="Xóa lớp học"
@@ -166,7 +187,7 @@ block main
                         i.fas.fa-trash
             else
               tr
-                td(colspan="8").text-center Không có lớp học nào
+                td(colspan="9").text-center Không có lớp học nào
 
       // Pagination
       if pagination

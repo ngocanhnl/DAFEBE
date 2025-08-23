@@ -15,7 +15,7 @@ block main
         | Thêm bài học
     .card-body
       // Form thêm bài học (ẩn/hiện bằng JS)
-      form#addLessonForm(action=`/admin/classes/${classData._id}/lessons/add` method="POST" style="display:none" class="mb-4 border rounded p-3 bg-light")
+      form#addLessonForm(action=`/admin/classes/${classData._id}/lessons/add` method="POST" enctype="multipart/form-data" style="display:none" class="mb-4 border rounded p-3 bg-light")
         h5.mb-3 Thêm bài học mới
         .mb-3
           label.form-label(for="lesson_name") Tên bài học
@@ -26,6 +26,10 @@ block main
         .mb-3
           label.form-label(for="video_url") Link video
           input.form-control(type="url" name="video_url")
+        .mb-3
+          label.form-label(for="lesson_file") File tài liệu (PDF, DOC, DOCX)
+          input.form-control(type="file" name="lesson_file" accept=".pdf,.doc,.docx")
+          small.form-text.text-muted Chỉ chấp nhận file PDF, DOC, DOCX. Kích thước tối đa 10MB.
         .d-flex.gap-2
           button.btn.btn-primary(type="submit") Thêm
           button.btn.btn-secondary(type="button" id="cancelAddLesson") Hủy
@@ -39,6 +43,7 @@ block main
                 th Tên bài học
                 th Nội dung
                 th Video
+                th File tài liệu
                 th Thao tác
             tbody
               each lesson, idx in classData.lessons
@@ -54,6 +59,20 @@ block main
                     else
                       span.text-muted Không có
                   td
+                    if lesson.file && lesson.file.url
+                      a(href=lesson.file.url target="_blank" download=lesson.file.original_name)
+                        i.fas.fa-download.me-1
+                        | Tải về
+                      br
+                      small.text-muted #{lesson.file.original_name}
+                      br
+                      form(action=`/admin/classes/${classData._id}/lessons/${idx}/delete-file` method="POST" style="display:inline-block")
+                        button.btn.btn-sm.btn-outline-danger(type="submit" onclick="return confirm('Bạn có chắc muốn xóa file này?')")
+                          i.fas.fa-trash.me-1
+                          | Xóa file
+                    else
+                      span.text-muted Không có
+                  td
                     button.btn.btn-sm.btn-warning(type="button" onclick=`showEditLesson(${idx})`)
                       i.fas.fa-edit.me-1
                       | Sửa
@@ -63,8 +82,8 @@ block main
                         | Xóa
                 // Form sửa bài học (ẩn/hiện bằng JS)
                 tr(id=`editLessonRow${idx}` style="display:none")
-                  td(colspan="5")
-                    form(action=`/admin/classes/${classData._id}/lessons/${idx}/edit` method="POST" class="border rounded p-3 bg-light")
+                  td(colspan="6")
+                    form(action=`/admin/classes/${classData._id}/lessons/${idx}/edit` method="POST" enctype="multipart/form-data" class="border rounded p-3 bg-light")
                       h5.mb-3 Sửa bài học
                       .mb-3
                         label.form-label(for="lesson_name") Tên bài học
@@ -75,6 +94,14 @@ block main
                       .mb-3
                         label.form-label(for="video_url") Link video
                         input.form-control(type="url" name="video_url" value=lesson.video_url)
+                      .mb-3
+                        label.form-label(for="lesson_file") File tài liệu (PDF, DOC, DOCX)
+                        if lesson.file && lesson.file.url
+                          .mb-2
+                            small.text-muted File hiện tại: 
+                            a(href=lesson.file.url target="_blank") #{lesson.file.original_name}
+                        input.form-control(type="file" name="lesson_file" accept=".pdf,.doc,.docx")
+                        small.form-text.text-muted Chỉ chấp nhận file PDF, DOC, DOCX. Kích thước tối đa 10MB.
                       .d-flex.gap-2
                         button.btn.btn-primary(type="submit") Lưu
                         button.btn.btn-secondary(type="button" onclick=`hideEditLesson(${idx})`) Hủy

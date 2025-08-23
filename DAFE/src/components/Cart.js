@@ -25,18 +25,30 @@ const Cart = () => {
         await authApis().delete(`${endpoints.cart}/${classId}`);
         loadCart();
         preview();
-    };
+    }
 
     const placeOrder = async () => {
         try {
-            const res = await authApis().post(endpoints.placeOrder);
+            const res = await authApis().post(endpoints.placeOrder, {
+                amount: summary?.total || 0, // Gửi tổng tiền từ cart
+                bankCode: '', // Có thể để trống hoặc thêm dropdown chọn ngân hàng
+                language: 'vn'
+            });
+            
             if (res.data?.success) {
-                setMessage("Thanh toán thành công");
-                await loadCart();
-                await preview();
+                // Redirect đến VNPay để thanh toán
+                if (res.data.data?.payment_url) {
+                    console.log("Redirecting to VNPay:", res.data.data.payment_url);
+                    window.location.href = res.data.data.payment_url;
+                } else {
+                    setMessage("Đã tạo đơn hàng nhưng không thể chuyển đến trang thanh toán");
+                }
+            } else {
+                setMessage("Không thể tạo đơn hàng: " + (res.data?.message || "Unknown error"));
             }
         } catch (e) {
-            setMessage("Thanh toán thất bại");
+            console.error("Payment error:", e);
+            setMessage("Thanh toán thất bại: " + (e.response?.data?.message || e.message));
         }
     };
 

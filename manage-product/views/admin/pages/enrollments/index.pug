@@ -1,403 +1,175 @@
 extends ../../layouts/default
 
 block main
-  style.
-    .card {
-      box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-      border-radius: 0.5rem;
-    }
-    .card-header {
-      background-color: #f8f9fa;
-      border-bottom: 1px solid #dee2e6;
-    }
-    .btn-group .btn {
-      margin-right: 0.25rem;
-    }
-    .btn-group .btn:last-child {
-      margin-right: 0;
-    }
-    .table th {
-      background-color: #f8f9fa;
-      border-top: none;
-    }
-    .badge {
-      font-size: 0.75rem;
-    }
-    .summary-card {
-      transition: transform 0.2s;
-    }
-    .summary-card:hover {
-      transform: translateY(-2px);
-    }
-  
-  h1.mb-4 Quản lý đăng ký học
+  h1.mb-4 Quản lý đăng ký khóa học
 
-  // Filter form
-  .card.mb-4
-    .card-header
-      h5.mb-0 Bộ lọc đăng ký
-    .card-body
-      form(action="/admin/enrollments" method="GET")
-        .row
-          .col-md-3
-            label.form-label Trạng thái
-            select.form-select(name="status")
-              option(value="") Tất cả trạng thái
-              option(value="pending", selected=(query && query.status === "pending")) Chờ duyệt
-              option(value="approved", selected=(query && query.status === "approved")) Đã duyệt
-              option(value="rejected", selected=(query && query.status === "rejected")) Từ chối
-          .col-md-3
-            label.form-label Khóa học
-            select.form-select(name="course_id")
-              option(value="") Tất cả khóa học
-              each course in courses
-                option(value=course._id selected=query.course_id == course._id.toString()) #{course.title}
-          .col-md-3
-            label.form-label Lớp học
-            select.form-select(name="class_id")
-              option(value="") Tất cả lớp học
-              each classItem in classes
-                option(value=classItem._id selected=query.class_id == classItem._id.toString()) #{classItem.class_code}
-          .col-md-3
-            label.form-label &nbsp;
-            button.btn.btn-primary.w-100(type="submit") 
-              i.fas.fa-search.me-2
-              | Lọc
-
-  // Summary cards
-  .row.mb-4
-    .col-md-3
-      .card.bg-primary.text-white.summary-card
-        .card-body.text-center
-          h4 #{summary.totalEnrollments || 0}
-          small Tổng đăng ký
-    .col-md-3
-      .card.bg-warning.text-white.summary-card
-        .card-body.text-center
-          h4 #{summary.pendingEnrollments || 0}
-          small Chờ duyệt
-    .col-md-3
-      .card.bg-success.text-white.summary-card
-        .card-body.text-center
-          h4 #{summary.approvedEnrollments || 0}
-          small Đã duyệt
-    .col-md-3
-      .card.bg-danger.text-white.summary-card
-        .card-body.text-center
-          h4 #{summary.rejectedEnrollments || 0}
-          small Từ chối
-
-  // Enrollments table
   .card
     .card-header
       .d-flex.justify-content-between.align-items-center
         h5.mb-0 Danh sách đăng ký
-        .btn-group
-          a.btn.btn-primary(href="/admin/enrollments/create")
-            i.fas.fa-plus.me-2
-            | Thêm mới
-          button.btn.btn-success#approve-selected(type="button") 
-            i.fas.fa-check.me-2
-            | Duyệt đã chọn
-          button.btn.btn-danger#reject-selected(type="button") 
-            i.fas.fa-times.me-2
-            | Từ chối đã chọn
+        .d-flex
+          a.btn.btn-primary.mr-2(href=`/${prefixAdmin}/enrollments/transfer-requests`) 
+            i.fas.fa-exchange-alt.mr-1
+            | Yêu cầu chuyển lớp
+          select#statusFilter.form-control.mr-2
+            option(value="") Tất cả trạng thái
+            option(value="pending") Chờ duyệt
+            option(value="approved") Đã duyệt
+            option(value="rejected") Đã từ chối
+            option(value="cancelled") Đã hủy
+            option(value="completed") Hoàn thành
+          select#classFilter.form-control
+            option(value="") Tất cả lớp học
+            each classItem in classes
+              option(value=classItem._id)= classItem.class_name
 
     .card-body
-      .table-responsive
-        table.table.table-striped
-          thead
-            tr
-              th
-                input.form-check-input#select-all(type="checkbox")
-              th Học viên
-              th Khóa học
-              th Lớp học
-              th Ngày đăng ký
-              th Thanh toán
-              th Trạng thái
-              th Thao tác
-
-          tbody
-            if enrollments && enrollments.length > 0
-              each enrollment in enrollments
-                tr
-                  td
-                    input.form-check-input.enrollment-check(type="checkbox" value=enrollment._id)
-                  td
-                    .d-flex.align-items-center
-                      .bg-secondary.rounded-circle.me-2.d-flex.align-items-center.justify-content-center(style="width: 32px; height: 32px;")
-                        i.fas.fa-user.text-white
-                      div
-                        strong #{enrollment.student_id ? enrollment.student_id.fullName : 'Không rõ'}
-                        br
-                        small.text-muted #{enrollment.student_id ? enrollment.student_id.email : 'Khong'}
-                  td
-                    if enrollment.class_id && enrollment.class_id.course_id
-                      a(href=`/admin/courses/${enrollment.class_id.course_id._id}`) #{enrollment.class_id.course_id.title || 'Không rõ'}
-                    else
-                      span.text-muted Không rõ
-                  td
-                    if enrollment.class_id
-                      a(href=`/admin/classes/${enrollment.class_id._id}`) #{enrollment.class_id.class_name || enrollment.class_id.class_name || 'Không rõ'}
-                    else
-                      span.text-muted Không rõ
-                  td #{enrollment.enrollment_date ? new Date(enrollment.enrollment_date).toLocaleDateString('vi-VN') : new Date(enrollment.createdAt).toLocaleDateString('vi-VN')}
-                  td
-                    if enrollment.payment_status === 'paid'
-                      span.badge.bg-success Đã thanh toán
-                      br
-                      small.text-muted #{enrollment.payment_date ? new Date(enrollment.payment_date).toLocaleDateString('vi-VN') : ''}
-                      br
-                      small.text-muted #{enrollment.amount_paid ? enrollment.amount_paid.toLocaleString('vi-VN') + 'đ' : ''}
-                    else
-                      span.badge.bg-secondary Chưa thanh toán
-                  td
-                    if enrollment.status === "pending"
-                      span.badge.bg-warning Chờ duyệt
-                    else if enrollment.status === "approved"
-                      span.badge.bg-success Đã duyệt
-                    else
-                      span.badge.bg-danger Từ chối
-                  td
-                    .btn-group
-                      a.btn.btn-sm.btn-outline-primary(href=`/admin/enrollments/detail/${enrollment._id}`) Xem
-                      if enrollment.status === "pending"
-                        button.btn.btn-sm.btn-success.approve-btn(data-id=enrollment._id) Duyệt
-                        button.btn.btn-sm.btn-danger.reject-btn(data-id=enrollment._id) Từ chối
-                      else if enrollment.status === "approved"
-                        button.btn.btn-sm.btn-warning.btn-sm(type="button" disabled) Đã duyệt
-                      else if enrollment.status === "rejected"
-                        button.btn.btn-sm.btn-secondary.btn-sm(type="button" disabled) Đã từ chối
-            else
-              tr
-                td.text-center(colspan="8")
-                  .py-4
-                    i.fas.fa-inbox.fa-3x.text-muted.mb-3
-                    h5.text-muted Không có đăng ký nào
-                    p.text-muted Vui lòng thêm đăng ký mới hoặc kiểm tra bộ lọc
-
-
-      // Pagination
-      if pagination
-        include ../../mixins/pagination
-        +pagination(pagination)
-
-  // Transfer requests
-  if transferRequests && transferRequests.length > 0
-    .card.mt-4
-      .card-header
-        h5.mb-0 Yêu cầu chuyển lớp
-      .card-body
+      if enrollments && enrollments.length > 0
         .table-responsive
           table.table.table-striped
             thead
               tr
                 th Học viên
-                th Lớp hiện tại
-                th Lớp yêu cầu
-                th Lý do
-                th Ngày yêu cầu
+                th Lớp học
+                th Ngày đăng ký
                 th Trạng thái
+                th Trạng thái thanh toán
                 th Thao tác
             tbody
-              each request in transferRequests
+              each enrollment in enrollments
                 tr
-                  td 
-                    if request.student_id
-                      strong #{request.student_id.fullName || 'Không rõ'}
+                  td
+                    strong= enrollment.student_id.fullName
+                    br
+                    small.text-muted= enrollment.student_id.email
+                    if enrollment.student_id.phone
                       br
-                      small.text-muted #{request.student_id.email || ''}
-                    else
-                      span.text-muted Không rõ
-                  td 
-                    if request.class_id
-                      #{request.class_id.class_code || request.class_id.class_name || 'Không rõ'}
-                    else
-                      span.text-muted Không rõ
-                  td 
-                    if request.transfer_request && request.transfer_request.target_class_id
-                      #{request.transfer_request.target_class_id.class_code || request.transfer_request.target_class_id.class_name || 'Không rõ'}
-                    else
-                      span.text-muted Không rõ
-                  td #{request.transfer_request ? request.transfer_request.reason : 'Không có'}
-                  td #{request.createdAt ? new Date(request.createdAt).toLocaleDateString('vi-VN') : 'Không rõ'}
+                      small.text-muted= enrollment.student_id.phone
                   td
-                    if request.transfer_request && request.transfer_request.status === "pending"
-                      span.badge.bg-warning Chờ duyệt
-                    else if request.transfer_request && request.transfer_request.status === "approved"
-                      span.badge.bg-success Đã duyệt
-                    else if request.transfer_request && request.transfer_request.status === "rejected"
-                      span.badge.bg-danger Từ chối
-                    else
-                      span.badge.bg-secondary Không có yêu cầu
+                    strong= enrollment.class_id.class_name
+                    br
+                    small.text-muted= enrollment.class_id.status
+                    br
+                    small.text-muted= `Từ ${moment(enrollment.class_id.start_date).format('DD/MM/YYYY')} đến ${moment(enrollment.class_id.end_date).format('DD/MM/YYYY')}`
                   td
-                    if request.transfer_request && request.transfer_request.status === "pending"
-                      .btn-group
-                        button.btn.btn-sm.btn-success.approve-transfer(data-id=request._id) Duyệt
-                        button.btn.btn-sm.btn-danger.reject-transfer(data-id=request._id) Từ chối
-                    else
-                      span.text-muted Đã xử lý
+                    span= moment(enrollment.enrollment_date).format('DD/MM/YYYY HH:mm')
+                  td
+                    if enrollment.status === 'pending'
+                      span.badge.badge-warning Chờ duyệt
+                    else if enrollment.status === 'approved'
+                      span.badge.badge-success Đã duyệt
+                    else if enrollment.status === 'rejected'
+                      span.badge.badge-danger Đã từ chối
+                    else if enrollment.status === 'cancelled'
+                      span.badge.badge-secondary Đã hủy
+                    else if enrollment.status === 'completed'
+                      span.badge.badge-info Hoàn thành
+                  td
+                    if enrollment.payment_status === 'pending'
+                      span.badge.badge-warning Chờ thanh toán
+                    else if enrollment.payment_status === 'paid'
+                      span.badge.badge-success Đã thanh toán
+                    else if enrollment.payment_status === 'refunded'
+                      span.badge.badge-info Đã hoàn tiền
+                  td
+                    .btn-group
+                      a.btn.btn-sm.btn-info(href=`/${prefixAdmin}/enrollments/detail/${enrollment._id}`) Chi tiết
+                      if enrollment.status === 'pending'
+                        button.btn.btn-sm.btn-success.approve-btn(data-id=enrollment._id) Duyệt
+                        button.btn.btn-sm.btn-danger.reject-btn(data-id=enrollment._id) Từ chối
+      else
+        .alert.alert-info Không có đăng ký nào
+
+      if pagination && pagination.totalPages > 1
+        +pagination(pagination)
 
 
   script.
-    // Select all functionality
-    document.getElementById('select-all').addEventListener('change', function() {
-      const checkboxes = document.querySelectorAll('.enrollment-check');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Filter theo status
+      const statusFilter = document.getElementById('statusFilter');
+      statusFilter.addEventListener('change', function() {
+        const status = this.value;
+        const currentUrl = new URL(window.location);
+        if (status) {
+          currentUrl.searchParams.set('status', status);
+        } else {
+          currentUrl.searchParams.delete('status');
+        }
+        window.location.href = currentUrl.toString();
       });
-    });
 
-    // Approve selected enrollments
-    document.getElementById('approve-selected').addEventListener('click', function() {
-      const selectedIds = Array.from(document.querySelectorAll('.enrollment-check:checked')).map(cb => cb.value);
-      if (selectedIds.length === 0) {
-        alert('Vui lòng chọn ít nhất một đăng ký để duyệt!');
-        return;
+      // Filter theo class
+      const classFilter = document.getElementById('classFilter');
+      classFilter.addEventListener('change', function() {
+        const classId = this.value;
+        const currentUrl = new URL(window.location);
+        if (classId) {
+          currentUrl.searchParams.set('class_id', classId);
+        } else {
+          currentUrl.searchParams.delete('class_id');
+        }
+        window.location.href = currentUrl.toString();
+      });
+
+      // Set giá trị filter hiện tại
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentStatus = urlParams.get('status');
+      const currentClassId = urlParams.get('class_id');
+
+      if (currentStatus) {
+        statusFilter.value = currentStatus;
       }
-      
-      if (confirm(`Bạn có chắc muốn duyệt ${selectedIds.length} đăng ký đã chọn?`)) {
-        fetch('/admin/enrollments/approve-multiple', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ enrollment_ids: selectedIds })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Đã duyệt thành công!');
-            window.location.reload();
-          } else {
-            alert('Có lỗi xảy ra: ' + data.message);
+      if (currentClassId) {
+        classFilter.value = currentClassId;
+      }
+
+      // Xử lý nút duyệt/từ chối
+      document.querySelectorAll('.approve-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const enrollmentId = this.getAttribute('data-id');
+          if (confirm('Bạn có chắc chắn muốn duyệt đăng ký này?')) {
+            fetch(`/admin/enrollments/${enrollmentId}/approve`, {
+              method: 'PATCH'
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert('Đã duyệt đăng ký thành công');
+                window.location.reload();
+              } else {
+                alert('Lỗi: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Có lỗi xảy ra');
+            });
           }
         });
-      }
-    });
+      });
 
-    // Reject selected enrollments
-    document.getElementById('reject-selected').addEventListener('click', function() {
-      const selectedIds = Array.from(document.querySelectorAll('.enrollment-check:checked')).map(cb => cb.value);
-      if (selectedIds.length === 0) {
-        alert('Vui lòng chọn ít nhất một đăng ký để từ chối!');
-        return;
-      }
-      
-      const reason = prompt('Lý do từ chối:');
-      if (reason !== null) {
-        fetch('/admin/enrollments/reject-multiple', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ enrollment_ids: selectedIds, reason: reason })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert('Đã từ chối thành công!');
-            window.location.reload();
-          } else {
-            alert('Có lỗi xảy ra: ' + data.message);
+      document.querySelectorAll('.reject-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const enrollmentId = this.getAttribute('data-id');
+          if (confirm('Bạn có chắc chắn muốn từ chối đăng ký này?')) {
+            fetch(`/admin/enrollments/${enrollmentId}/reject`, {
+              method: 'PATCH'
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                alert('Đã từ chối đăng ký');
+                window.location.reload();
+              } else {
+                alert('Lỗi: ' + data.message);
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Có lỗi xảy ra');
+            });
           }
         });
-      }
-    });
-
-    // Individual approve/reject buttons
-    document.querySelectorAll('.approve-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const enrollmentId = this.dataset.id;
-        if (confirm('Bạn có chắc muốn duyệt đăng ký này?')) {
-          fetch(`/admin/enrollments/approve/${enrollmentId}`, {
-            method: 'PATCH'
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              window.location.reload();
-            } else {
-              alert('Có lỗi xảy ra: ' + data.message);
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert('Có lỗi xảy ra khi duyệt đăng ký');
-          });
-        }
-      });
-    });
-
-    document.querySelectorAll('.reject-btn').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const enrollmentId = this.dataset.id;
-        const reason = prompt('Lý do từ chối:');
-        if (reason !== null) {
-          fetch(`/admin/enrollments/reject/${enrollmentId}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reason: reason })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              window.location.reload();
-            } else {
-              alert('Có lỗi xảy ra: ' + data.message);
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            alert('Có lỗi xảy ra khi từ chối đăng ký');
-          });
-        }
-      });
-    });
-
-    // Transfer request handlers
-    document.querySelectorAll('.approve-transfer').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const requestId = this.dataset.id;
-        if (confirm('Bạn có chắc muốn duyệt yêu cầu chuyển lớp này?')) {
-          fetch(`/admin/enrollments/transfer/${requestId}/approve`, {
-            method: 'POST'
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              window.location.reload();
-            } else {
-              alert('Có lỗi xảy ra: ' + data.message);
-            }
-          });
-        }
-      });
-    });
-
-    document.querySelectorAll('.reject-transfer').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const requestId = this.dataset.id;
-        const reason = prompt('Lý do từ chối:');
-        if (reason !== null) {
-          fetch(`/admin/enrollments/transfer/${requestId}/reject`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ reason: reason })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              window.location.reload();
-            } else {
-              alert('Có lỗi xảy ra: ' + data.message);
-            }
-          });
-        }
       });
     }); 

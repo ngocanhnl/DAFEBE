@@ -97,6 +97,9 @@ const Header = ({ onLogout }) => {
 
             {user === null ? (
                 <>
+                    <Link to="/register" className="mb-2 text-decoration-none text-dark d-flex align-items-center gap-2">
+                        <FaSignInAlt /> <span>Đăng ký</span>
+                    </Link>
                     <Link to="/login" className="mb-2 text-decoration-none text-dark d-flex align-items-center gap-2">
                         <FaSignInAlt /> <span>Đăng nhập</span>
                     </Link>

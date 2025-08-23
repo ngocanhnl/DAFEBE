@@ -1,0 +1,121 @@
+extends ../../layouts/default.pug
+
+block main
+  h1(class="mb-3") Chat lớp - #{classData.class_name}
+  p.text-muted Khóa học: #{classData.course_id.title}
+
+  .row
+    .col-md-4
+      .card
+        .card-header
+          h5.mb-0 Học sinh đang chat
+        .card-body
+          p.small.text-muted Danh sách hiển thị realtime từ Firebase.
+          ul.list-group#chatStudents
+            //- Will be filled by script
+    .col-md-8
+      .card
+        .card-header
+          h5.mb-0 Hội thoại
+        .card-body
+          p.small.text-muted Chọn học sinh ở cột trái để xem tin nhắn.
+          div#messageList(style="height: 420px; overflow-y: auto; background: #fafafa; padding: 8px;")
+          form#chatForm(class="mt-2 d-flex gap-2")
+            input.form-control#chatText(type="text" placeholder="Nhập tin nhắn...")
+            button.btn.btn-primary(type="submit") Gửi
+
+  // Firebase SDK via CDN (admin view only)
+  script(src="https://www.gstatic.com/firebasejs/10.12.4/firebase-app-compat.js")
+  script(src="https://www.gstatic.com/firebasejs/10.12.4/firebase-database-compat.js")
+  script.
+    (function(){
+      // Read Firebase config from data attributes or set here
+      var firebaseConfig = {
+        apiKey: '#{process.env.FIREBASE_API_KEY || ''}',
+        authDomain: '#{process.env.FIREBASE_AUTH_DOMAIN || ''}',
+        databaseURL: '#{process.env.FIREBASE_DB_URL || ''}',
+        projectId: '#{process.env.FIREBASE_PROJECT_ID || ''}',
+        storageBucket: '#{process.env.FIREBASE_STORAGE_BUCKET || ''}',
+        messagingSenderId: '#{process.env.FIREBASE_MESSAGING_SENDER_ID || ''}',
+        appId: '#{process.env.FIREBASE_APP_ID || ''}'
+      };
+      if (!firebaseConfig.databaseURL) {
+        console.warn('Firebase chưa cấu hình. Điền biến môi trường FIREBASE_* trong server.');
+      }
+      firebase.initializeApp(firebaseConfig);
+      var db = firebase.database();
+
+      var classId = '#{classData._id}';
+      var instructorId = '#{classData.instructor_id._id}';
+      var selectedRoomId = null;
+
+      function buildRoomId(classId, instructorId, studentId){
+        return 'class_' + classId + '__inst_' + instructorId + '__stu_' + studentId;
+      }
+
+      // Load active students list
+      var roomsRef = db.ref('chat/rooms');
+      roomsRef.orderByChild('classId').equalTo(classId).on('value', function(snap){
+        var list = document.getElementById('chatStudents');
+        list.innerHTML = '';
+        var data = snap.val() || {};
+        var entries = Object.entries(data).filter(function([rid, r]){ return r.instructorId === instructorId; });
+        entries.sort(function(a,b){ return (a[1].lastMessageAt || 0) - (b[1].lastMessageAt || 0); });
+        entries.reverse();
+        entries.forEach(function([rid, r]){
+          var li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center';
+          li.textContent = (r.studentName || r.studentId || 'Học viên');
+          var badge = document.createElement('span');
+          badge.className = 'badge bg-secondary rounded-pill';
+          badge.textContent = (rid || '').slice(-6);
+          li.appendChild(badge);
+          li.style.cursor = 'pointer';
+          li.onclick = function(){ selectRoom(rid); };
+          list.appendChild(li);
+        });
+      });
+
+      var messagesRef = null;
+      function selectRoom(roomId){
+        selectedRoomId = roomId;
+        var list = document.getElementById('messageList');
+        list.innerHTML = '';
+        if (messagesRef) messagesRef.off();
+        messagesRef = db.ref('chat/messages/' + roomId);
+        messagesRef.on('child_added', function(snap){
+          var m = snap.val();
+          var div = document.createElement('div');
+          var mine = m.senderId === instructorId;
+          div.className = 'mb-2 ' + (mine ? 'text-end' : '');
+          var small = document.createElement('div');
+          small.className = 'small text-muted';
+          small.textContent = mine ? 'Bạn' : (m.senderName || 'Học viên');
+          var body = document.createElement('div');
+          body.textContent = m.text;
+          div.appendChild(small);
+          div.appendChild(body);
+          list.appendChild(div);
+          list.scrollTop = list.scrollHeight;
+        });
+      }
+
+      var form = document.getElementById('chatForm');
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        var input = document.getElementById('chatText');
+        var text = (input.value || '').trim();
+        if (!text || !selectedRoomId) return;
+        var msgRef = db.ref('chat/messages/' + selectedRoomId).push();
+        msgRef.set({
+          text: text,
+          senderId: instructorId,
+          senderName: '#{(res && res.locals && res.locals.user && res.locals.user.fullName) || ''}',
+          createdAt: firebase.database.ServerValue.TIMESTAMP
+        });
+        db.ref('chat/rooms/' + selectedRoomId).update({ lastMessage: text, lastMessageAt: firebase.database.ServerValue.TIMESTAMP });
+        input.value = '';
+      });
+    })();
+  
+

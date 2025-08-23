@@ -5,61 +5,309 @@ const Course = require("../../models/course.model");
 const systemConfig = require("../../config/system");
 const Role = require("../../models/role.model");
 
+// [GET] /admin/enrollments/transfer-requests
+module.exports.getTransferRequests = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        // Lấy tất cả yêu cầu chuyển lớp
+        const transferRequests = await Enrollment.find({
+            "transfer_request.requested": true,
+            deleted: false
+        })
+        .populate([
+            { path: "student_id", select: "fullName email phone" },
+            { path: "class_id", select: "class_name start_date end_date status course_id" },
+            { path: "transfer_request.target_class_id", select: "class_name start_date end_date status instructor_id" },
+            { path: "transfer_request.approved_by", select: "fullName" },
+            { path: "transfer_request.teacher_approved_by", select: "fullName" }
+        ])
+        .sort({ "transfer_request.requested_date": -1 })
+        .skip(skip)
+        .limit(limit);
+
+        const totalRequests = await Enrollment.countDocuments({
+            "transfer_request.requested": true,
+            deleted: false
+        });
+
+        const totalPages = Math.ceil(totalRequests / limit);
+
+        // Lọc theo trạng thái nếu có
+        let filteredRequests = transferRequests;
+        if (req.query.status) {
+            filteredRequests = transferRequests.filter(
+                request => request.transfer_request.status === req.query.status
+            );
+        }
+
+        res.render("admin/pages/enrollments/transfer-requests", {
+            pageTitle: "Quản lý yêu cầu chuyển lớp",
+            transferRequests: filteredRequests,
+            pagination: {
+                page: page,
+                limit: limit,
+                total: totalRequests,
+                totalPages: totalPages
+            },
+            query: req.query
+        });
+
+    } catch (error) {
+        console.error("Error fetching transfer requests:", error);
+        req.flash("error", "Có lỗi xảy ra khi tải danh sách yêu cầu chuyển lớp");
+        res.redirect("back");
+    }
+};
+
+// [GET] /admin/enrollments/transfer-requests/:id
+module.exports.getTransferRequestDetail = async (req, res) => {
+    try {
+        const enrollmentId = req.params.id;
+
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+            "transfer_request.requested": true,
+            deleted: false
+        })
+        .populate([
+            { path: "student_id", select: "fullName email phone" },
+            { path: "class_id", select: "class_name start_date end_date status course_id instructor_id" },
+            { path: "transfer_request.target_class_id", select: "class_name start_date end_date status instructor_id" },
+            { path: "transfer_request.approved_by", select: "fullName" },
+            { path: "transfer_request.teacher_approved_by", select: "fullName" }
+        ]);
+
+        if (!enrollment) {
+            req.flash("error", "Không tìm thấy yêu cầu chuyển lớp");
+            return res.redirect(`/${systemConfig.prefixAdmin}/enrollments/transfer-requests`);
+        }
+
+        // Lấy thông tin số học viên hiện tại của lớp đích
+        const targetClassEnrollments = await Enrollment.countDocuments({
+            class_id: enrollment.transfer_request.target_class_id._id,
+            status: { $in: ["approved", "pending_teacher_approval"] },
+            deleted: false
+        });
+
+        const targetClass = enrollment.transfer_request.target_class_id;
+        const availableSlots = targetClass.max_students - targetClassEnrollments;
+
+        res.render("admin/pages/enrollments/transfer-request-detail", {
+            pageTitle: "Chi tiết yêu cầu chuyển lớp",
+            enrollment: enrollment,
+            availableSlots: availableSlots
+        });
+
+    } catch (error) {
+        console.error("Error fetching transfer request detail:", error);
+        req.flash("error", "Có lỗi xảy ra khi tải chi tiết yêu cầu chuyển lớp");
+        res.redirect("back");
+    }
+};
+
+// [POST] /admin/enrollments/transfer-requests/:id/approve
+module.exports.approveTransferRequest = async (req, res) => {
+    try {
+        const enrollmentId = req.params.id;
+        const { notes } = req.body;
+
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+            "transfer_request.requested": true,
+            "transfer_request.status": "pending",
+            deleted: false
+        })
+        .populate([
+            { path: "class_id", select: "status instructor_id" },
+            { path: "transfer_request.target_class_id", select: "status instructor_id" }
+        ]);
+
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy yêu cầu chuyển lớp hợp lệ"
+            });
+        }
+
+        const currentClass = enrollment.class_id;
+        const targetClass = enrollment.transfer_request.target_class_id;
+
+        // Kiểm tra xem lớp đích còn chỗ không
+        const targetClassEnrollments = await Enrollment.countDocuments({
+            class_id: targetClass._id,
+            status: { $in: ["approved", "pending_teacher_approval"] },
+            deleted: false
+        });
+
+        if (targetClassEnrollments >= targetClass.max_students) {
+            return res.status(400).json({
+                success: false,
+                message: "Lớp học đích đã đầy"
+            });
+        }
+
+        // Xác định trạng thái tiếp theo dựa trên trạng thái lớp đích
+        let nextStatus = "approved";
+        if (targetClass.status === "ongoing") {
+            nextStatus = "pending_teacher_approval";
+        }
+
+        // Cập nhật yêu cầu chuyển lớp
+        await Enrollment.updateOne(
+            { _id: enrollmentId },
+            {
+                "transfer_request.status": nextStatus,
+                "transfer_request.approved_by": res.locals.user._id,
+                "transfer_request.approved_date": new Date(),
+                "transfer_request.notes": notes || ""
+            }
+        );
+
+        // Nếu lớp đích đang diễn ra, tạo enrollment mới với trạng thái pending_teacher_approval
+        if (targetClass.status === "ongoing") {
+            // Kiểm tra xem đã có enrollment cho lớp đích chưa
+            const existingEnrollment = await Enrollment.findOne({
+                student_id: enrollment.student_id,
+                class_id: targetClass._id,
+                deleted: false
+            });
+
+            if (!existingEnrollment) {
+                // Tạo enrollment mới cho lớp đích
+                await Enrollment.create({
+                    student_id: enrollment.student_id,
+                    class_id: targetClass._id,
+                    status: "pending_teacher_approval",
+                    payment_status: enrollment.payment_status,
+                    amount_paid: enrollment.amount_paid,
+                    enrollment_date: new Date()
+                });
+            }
+        } else {
+            // Nếu lớp chưa bắt đầu, chuyển enrollment trực tiếp
+            await Enrollment.updateOne(
+                { _id: enrollmentId },
+                {
+                    class_id: targetClass._id,
+                    status: "approved"
+                }
+            );
+        }
+
+        return res.json({
+            success: true,
+            message: nextStatus === "pending_teacher_approval" 
+                ? "Đã duyệt yêu cầu chuyển lớp. Học viên cần được giáo viên duyệt để vào lớp."
+                : "Đã duyệt yêu cầu chuyển lớp thành công"
+        });
+
+    } catch (error) {
+        console.error("Error approving transfer request:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Có lỗi xảy ra khi duyệt yêu cầu chuyển lớp",
+            error: error.message
+        });
+    }
+};
+
+// [POST] /admin/enrollments/transfer-requests/:id/reject
+module.exports.rejectTransferRequest = async (req, res) => {
+    try {
+        const enrollmentId = req.params.id;
+        const { notes } = req.body;
+
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+            "transfer_request.requested": true,
+            "transfer_request.status": "pending",
+            deleted: false
+        })
+        .populate([
+            { path: "class_id", select: "status instructor_id" },
+            { path: "transfer_request.target_class_id", select: "status instructor_id" }
+        ]);
+
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy yêu cầu chuyển lớp hợp lệ"
+            });
+        }
+
+        // Từ chối yêu cầu
+        await Enrollment.updateOne(
+            { _id: enrollmentId },
+            {
+                "transfer_request.status": "rejected",
+                "transfer_request.approved_by": req.user._id,
+                "transfer_request.approved_date": new Date(),
+                "transfer_request.notes": notes || ""
+            }
+        );
+
+        return res.json({
+            success: true,
+            message: "Đã từ chối yêu cầu chuyển lớp"
+        });
+
+    } catch (error) {
+        console.error("Error rejecting transfer request:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Có lỗi xảy ra khi từ chối yêu cầu chuyển lớp",
+            error: error.message
+        });
+    }
+};
+
 // [GET] /admin/enrollments
 module.exports.index = async (req, res) => {
     try {
-        const { status, course, class_id } = req.query;
-        const courses = await Course.find({ deleted: false });
-        let filter = { deleted: false };
-        
-        if (status) filter.status = status;
-        if (class_id) filter.class_id = class_id;
-        
-        const enrollments = await Enrollment.find(filter)
-            .populate('student_id', 'fullName email phone')
-            .populate({
-                path: 'class_id',
-                select: 'class_code course_id class_name',
-                populate: {
-                    path: 'course_id',
-                    select: 'title'
-                }
-            })
-            
-            .sort({ createdAt: -1 });
-            console.log("enrollments", enrollments);
-        const classes = await Class.find({ deleted: false });
-        // Get summary statistics
-        const totalEnrollments = await Enrollment.countDocuments({ deleted: false });
-        const pendingEnrollments = await Enrollment.countDocuments({ deleted: false, status: "pending" });
-        const approvedEnrollments = await Enrollment.countDocuments({ deleted: false, status: "approved" });
-        const rejectedEnrollments = await Enrollment.countDocuments({ deleted: false, status: "rejected" });
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
 
-        // Get transfer requests
-        const transferRequests = await Enrollment.find({ 
-            deleted: false,
-            "transfer_request.status": "pending",
-            "transfer_request.requested": "true"
-        })
-        .populate('student_id', 'fullName email')
-        .populate('class_id', 'class_code class_name')
-        .populate('transfer_request.target_class_id', 'class_code class_name')
-        .sort({ createdAt: -1 });
+        const filterQuery = { deleted: false };
+        
+        if (req.query.status) {
+            filterQuery.status = req.query.status;
+        }
+
+        if (req.query.class_id) {
+            filterQuery.class_id = req.query.class_id;
+        }
+
+        const totalEnrollments = await Enrollment.countDocuments(filterQuery);
+        const totalPages = Math.ceil(totalEnrollments / limit);
+
+        const enrollments = await Enrollment.find(filterQuery)
+            .populate([
+                { path: "student_id", select: "fullName email phone" },
+                { path: "class_id", select: "class_name start_date end_date status course_id" }
+            ])
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const classes = await Class.find({ deleted: false, status: { $in: ["upcoming", "ongoing"] } });
 
         res.render("admin/pages/enrollments/index", {
-            pageTitle: "Quản lý đăng ký",
+            pageTitle: "Quản lý đăng ký khóa học",
             enrollments: enrollments,
-            transferRequests: transferRequests,
-            summary: {
-                totalEnrollments: totalEnrollments,
-                pendingEnrollments: pendingEnrollments,
-                approvedEnrollments: approvedEnrollments,
-                rejectedEnrollments: rejectedEnrollments
+            classes: classes,
+            pagination: {
+                page: page,
+                limit: limit,
+                total: totalEnrollments,
+                totalPages: totalPages
             },
-            courses: courses,
-            query: req.query,
-            classes: classes
+            query: req.query
         });
+
     } catch (error) {
         console.error("Error fetching enrollments:", error);
         req.flash("error", "Có lỗi xảy ra khi tải danh sách đăng ký");

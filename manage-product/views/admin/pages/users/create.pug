@@ -1,0 +1,109 @@
+extends ../../layouts/default.pug
+
+block main
+  h1(class="mb-4") Thêm mới người dùng
+
+  .card
+    .card-body
+      form(
+        action=`/${prefixAdmin}/users/create`
+        method="POST"
+        enctype="multipart/form-data"
+      )
+        .row
+          .col-md-6
+            .form-group
+              label(for="fullName") Họ tên
+              input(
+                type="text"
+                class="form-control"
+                id="fullName"
+                name="fullName"
+                required
+              )
+          
+          .col-md-6
+            .form-group
+              label(for="email") Email
+              input(
+                type="email"
+                class="form-control"
+                id="email"
+                name="email"
+                required
+              )
+        
+        .row
+          .col-md-6
+            .form-group
+              label(for="password") Mật khẩu
+              input(
+                type="password"
+                class="form-control"
+                id="password"
+                name="password"
+                required
+              )
+          
+          .col-md-6
+            .form-group
+              label(for="phone") Số điện thoại
+              input(
+                type="tel"
+                class="form-control"
+                id="phone"
+                name="phone"
+              )
+        
+        .row
+          .col-md-6
+            .form-group
+              label(for="avatar") Avatar
+              input(
+                type="file"
+                class="form-control-file"
+                id="avatar"
+                name="avatar"
+                accept="image/*"
+              )
+          
+          .col-md-6
+            .form-group
+              label(for="status") Trạng thái
+              select(
+                class="form-control"
+                id="status"
+                name="status"
+              )
+                option(value="active") Hoạt động
+                option(value="inactive") Dừng hoạt động
+        
+        .form-group
+          label(for="email_verified") Xác thực email
+          select(
+            class="form-control"
+            id="email_verified"
+            name="email_verified"
+          )
+            option(value="false") Chưa xác thực
+            option(value="true") Đã xác thực
+        
+        .form-group
+          label(for="phone_verified") Xác thực số điện thoại
+          select(
+            class="form-control"
+            id="phone_verified"
+            name="phone_verified"
+          )
+            option(value="false") Chưa xác thực
+            option(value="true") Đã xác thực
+        
+        .form-group.mt-4
+          button(
+            type="submit"
+            class="btn btn-primary"
+          ) Thêm mới
+          a(
+            href=`/${prefixAdmin}/users`
+            class="btn btn-secondary ml-2"
+          ) Hủy bỏ

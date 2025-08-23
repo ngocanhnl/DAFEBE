@@ -1,0 +1,122 @@
+extends ../../layouts/default.pug
+
+block main
+  h1(class="mb-4") Quản lý Livestream
+
+  .card.mb-3
+    .card-header
+      .d-flex.justify-content-between.align-items-center
+        h5.mb-0 Danh sách Livestream
+        a.btn.btn-primary(href="/admin/classes") 
+          i.fas.fa-plus.me-2
+          | Tạo Livestream mới
+
+    .card-body
+      .table-responsive
+        table.table.table-striped.table-hover
+          thead.table-dark
+            tr
+              th Lớp học
+              th Khóa học
+              th Giảng viên
+              th Trạng thái
+              th Ngày tạo
+              th Lượt xem
+              th Thao tác
+          tbody
+            if classes && classes.length > 0
+              each classItem in classes
+                tr
+                  td 
+                    strong #{classItem.class_name}
+                  td #{classItem.course_id.title}
+                  td #{classItem.instructor_id.fullName}
+                  td
+                    if classItem.livestream.isLive
+                      span.badge.bg-danger
+                        i.fas.fa-broadcast-tower.me-1
+                        | Đang Live
+                    else
+                      span.badge.bg-secondary
+                        i.fas.fa-pause.me-1
+                        | Đã dừng
+                  td #{moment(classItem.livestream.liveStartTime).format("DD/MM/YYYY HH:mm")}
+                  td
+                    span.badge.bg-info #{classItem.livestream.viewCount || 0}
+                  td
+                    .btn-group
+                      a.btn.btn-sm.btn-outline-primary(
+                        href=`/admin/livestream/${classItem._id}`
+                        title="Xem livestream"
+                      )
+                        i.fas.fa-eye
+                      if classItem.livestream.isLive
+                        button.btn.btn-sm.btn-outline-warning(
+                          onclick=`stopLivestream('${classItem._id}')`
+                          title="Dừng livestream"
+                        )
+                          i.fas.fa-stop
+                      else
+                        button.btn.btn-sm.btn-outline-success(
+                          onclick=`startLivestream('${classItem._id}')`
+                          title="Bắt đầu livestream"
+                        )
+                          i.fas.fa-play
+                      a.btn.btn-sm.btn-outline-info(
+                        href=classItem.livestream.youtubeUrl
+                        target="_blank"
+                        title="Mở YouTube"
+                      )
+                        i.fab.fa-youtube
+            else
+              tr
+                td(colspan="7").text-center Không có livestream nào
+
+  script.
+    function startLivestream(classId) {
+      if (confirm('Bạn có chắc muốn bắt đầu livestream?')) {
+        fetch(`/admin/livestream/${classId}/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi bắt đầu livestream');
+        });
+      }
+    }
+
+    function stopLivestream(classId) {
+      if (confirm('Bạn có chắc muốn dừng livestream?')) {
+        fetch(`/admin/livestream/${classId}/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi dừng livestream');
+        });
+      }
+    }

@@ -106,6 +106,9 @@ block main
             a.btn.btn-outline-primary(href=`/admin/classes/${classData._id}/students`) 
               i.fas.fa-users.me-2
               | Xem danh sách học viên
+            a.btn.btn-outline-primary(href=`/admin/classes/${classData._id}/chat`)
+              i.fas.fa-comments.me-2
+              | Chat lớp (realtime)
             a.btn.btn-outline-success(href=`/admin/attendance/take-attendance/${classData._id}`) 
               i.fas.fa-clipboard-check.me-2
               | Điểm danh

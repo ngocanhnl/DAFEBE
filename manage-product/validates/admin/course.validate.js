@@ -14,11 +14,11 @@ module.exports.createPost = (req,res,next)=>{
         res.redirect("back");
         return;
     }
-    if(!req.body.instructor){
-        req.flash("error", "Vui lòng nhập tên giảng viên!");
-        res.redirect("back");
-        return;
-    }
+    // if(!req.body.instructor){
+    //     req.flash("error", "Vui lòng nhập tên giảng viên!");
+    //     res.redirect("back");
+    //     return;
+    // }
     if(!req.body.level){
         req.flash("error", "Vui lòng chọn cấp độ khóa học!");
         res.redirect("back");

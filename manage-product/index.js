@@ -46,6 +46,7 @@ app.use(cors({ origin: true, credentials: true }));
 // route(app);
 AdminRoute(app);
 ClientApiRoute(app);
+
 // app.get("*", (req, res) => {
 //   res.render("client/pages/error/page404", {
 //     pageTitle: "404 Not Found",
@@ -55,8 +56,17 @@ ClientApiRoute(app);
 
 // SocketIO
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: { origin: true, credentials: true }
+});
 global._io = io;
+
+// Init socket namespaces/handlers
+try {
+  require("./sockets/livestream.socket")(io);
+} catch (err) {
+  console.warn("Socket livestream init failed:", err?.message || err);
+}
 
 //Variables
 app.locals.prefixAdmin = systemConfig.prefixAdmin;

@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const enrollmentSchema = new mongoose.Schema({
     student_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Account' // thay 'User' bằng tên model thực tế bạn đang dùng cho người dùng
+        ref: 'User' // thay 'User' bằng tên model thực tế bạn đang dùng cho người dùng
     },
     class_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -15,7 +15,7 @@ const enrollmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed'],
+        enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed', 'pending_teacher_approval'],
         default: 'pending'
     },
     payment_status: {
@@ -32,15 +32,27 @@ const enrollmentSchema = new mongoose.Schema({
         },
         requested_date: Date,
         reason: String,
-        target_class_id: String, // Lớp học muốn chuyển đến
+        target_class_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Class'
+        }, // Lớp học muốn chuyển đến
         status: {
             type: String,
-            enum: ['pending', 'approved', 'rejected'],
+            enum: ['pending', 'approved', 'rejected', 'pending_teacher_approval'],
             default: 'pending'
         },
-        approved_by: String, // ID của admin/giáo viên duyệt
+        approved_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Account'
+        }, // ID của admin/giáo viên duyệt
         approved_date: Date,
-        notes: String
+        teacher_approved_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Account'
+        }, // ID của giáo viên duyệt cuối cùng
+        teacher_approved_date: Date,
+        notes: String,
+        teacher_notes: String // Ghi chú của giáo viên
     },
     deleted: {
         type: Boolean,

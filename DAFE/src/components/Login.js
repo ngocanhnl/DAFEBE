@@ -5,6 +5,7 @@ import cookie from 'react-cookies'
 import { MyUserContext } from "../configs/Contexts";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import MySpinner from "./layout/MySpinner";
+import { Link } from "react-router-dom";
 
 const Login = () => {
     const [,dispatch] = useContext(MyUserContext);
@@ -63,7 +64,9 @@ const Login = () => {
 
               
                 {loading ? <MySpinner/>:<Form.Group className="mb-3" controlId="exampleForm.ControlInput2">
-                    <Button type="submit" variant="success">Đăng nhập</Button>
+                    <Button type="submit" variant="success" className="me-2">Đăng nhập</Button>
+                    <Link to="/register" className="me-2">Đăng ký</Link>
+                    <Link to="/verify-otp">Xác thực OTP</Link>
                 </Form.Group>}
                 
             </Form>

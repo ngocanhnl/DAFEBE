@@ -24,8 +24,10 @@
       if(role.permission.includes("teaching_history_view"))  
         li
           a(href=`/${prefixAdmin}/teaching-history`) Lịch sử giảng dạy
+      if(role.permission.includes("livestream_view"))  
+        li
+          a(href=`/${prefixAdmin}/livestream/manage`) Quản lý Livestream
       if(role.permission.includes("roles_view"))  
-      
         li
           a(href=`/${prefixAdmin}/roles`) Nhóm quyền
       if(role.permission.includes("roles_permissions"))  
@@ -34,5 +36,8 @@
       if(role.permission.includes("accounts_view"))  
         li
           a(href=`/${prefixAdmin}/accounts`) Tài khoản
+      if(role.permission.includes("users_view"))  
+        li
+          a(href=`/${prefixAdmin}/users`) Quản lý người dùng
       li
         a(href=`/${prefixAdmin}/settings/general`) Cài đặt chung

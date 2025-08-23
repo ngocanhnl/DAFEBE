@@ -4,6 +4,29 @@ const Account = require("../../models/account.model");
 const Enrollment = require("../../models/enrollment.model");
 const Role = require("../../models/role.model");
 const systemConfig = require("../../config/system");
+const deleteFileFromCloudinary = require("../../helper/deleteFileFromCloudinary");
+
+// [GET] /admin/classes/:id/chat
+module.exports.viewChat = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const classData = await Class.findById(id)
+            .populate('course_id', 'title')
+            .populate('instructor_id', 'fullName email');
+        if (!classData) {
+            req.flash('error', 'Không tìm thấy lớp học');
+            return res.redirect('back');
+        }
+        res.render('admin/pages/classes/chat', {
+            pageTitle: `Chat lớp - ${classData.class_name}`,
+            classData
+        });
+    } catch (error) {
+        console.error('Error viewChat:', error);
+        req.flash('error', 'Có lỗi xảy ra');
+        res.redirect('back');
+    }
+};
 
 // [GET] /admin/classes
 module.exports.index = async (req, res) => {
@@ -130,6 +153,8 @@ module.exports.create = async (req, res) => {
 // [POST] /admin/classes/create
 module.exports.createPost = async (req, res) => {
     console.log("req.body ",req.body)
+    const coursePrice = await Course.findOne({_id: req.body.course_id});
+    const finalPrice = coursePrice.price - (coursePrice.price * coursePrice.discountPercentage / 100);
     try {
         // Mapping day string -> number
         const dayMap = {
@@ -184,6 +209,7 @@ module.exports.createPost = async (req, res) => {
           schedule: scheduleArray,
           location: req.body.location,
           description: req.body.description,
+          price: finalPrice,
           status: req.body.status || "upcoming",
           instructor_history: [{
             instructor_id: req.body.instructor_id,
@@ -387,22 +413,196 @@ module.exports.viewStudents = async (req, res) => {
             return res.redirect(`/${systemConfig.prefixAdmin}/classes`);
         }
 
-        const enrollments = await Enrollment.find({ 
+        // Lấy danh sách học viên đã được duyệt
+        const approvedEnrollments = await Enrollment.find({ 
             class_id: classId,
             status: "approved"
         })
         .populate('student_id', 'fullName email phone')
         .sort({ createdAt: -1 });
 
+        // Lấy danh sách học viên chờ giáo viên duyệt
+        // const pendingTeacherApprovalEnrollments = await Enrollment.find({ 
+        //     target_class_id: classId,
+        //     status: "pending_teacher_approval"
+        // })
+        // .populate('student_id', 'fullName email phone')
+        // .sort({ createdAt: -1 });
+
+        const pendingTeacherApprovalEnrollments = await Enrollment.find({ 
+            "transfer_request.target_class_id": classId,
+            "transfer_request.status": "pending_teacher_approval"
+          })
+          .populate('student_id', 'fullName email phone')
+          .sort({ createdAt: -1 });
+          
+
+
         res.render("admin/pages/classes/students", {
             pageTitle: "Danh sách học viên",
             classData: classData,
-            enrollments: enrollments
+            approvedEnrollments: approvedEnrollments,
+            pendingTeacherApprovalEnrollments: pendingTeacherApprovalEnrollments
         });
     } catch (error) {
         console.error("Error loading students:", error);
         req.flash("error", "Có lỗi xảy ra khi tải danh sách học viên");
         res.redirect("back");
+    }
+};
+
+// [POST] /admin/classes/:id/approve-student/:enrollmentId
+module.exports.approveStudent = async (req, res) => {
+    try {
+        const classId = req.params.id;
+        const enrollmentId = req.params.enrollmentId;
+        const { teacher_notes } = req.body;
+
+        // Kiểm tra lớp học
+        const classData = await Class.findOne({ _id: classId, deleted: false });
+        if (!classData) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy lớp học"
+            });
+        }
+
+        // Kiểm tra quyền (chỉ giáo viên phụ trách mới được duyệt)
+        if (classData.instructor_id.toString() !== res.locals.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền duyệt học viên cho lớp này"
+            });
+        }
+
+        // Kiểm tra enrollment
+        //http://localhost:4000/admin/classes/6891a20832d7ea6449076303/approve-student/68a152ca74950daef78abd27
+        // const enrollment = await Enrollment.findOne({
+        //     _id: enrollmentId,
+        //     class_id: classId,
+        //     status: "pending_teacher_approval",
+        //     deleted: false
+        // });
+
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+           
+      
+           
+        });
+        
+
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy yêu cầu đăng ký hợp lệ"
+            });
+        }
+
+        // Kiểm tra xem lớp còn chỗ không
+        const currentEnrollments = await Enrollment.countDocuments({
+            class_id: classId,
+            status: "approved",
+            deleted: false
+        });
+
+        if (currentEnrollments >= classData.max_students) {
+            return res.status(400).json({
+                success: false,
+                message: "Lớp học đã đầy"
+            });
+        }
+
+        // Duyệt học viên
+        await Enrollment.updateOne(
+            { _id: enrollmentId },
+            {
+                status: "approved",
+                class_id: classId,
+                 "transfer_request.status": "teacher_approval",
+                "transfer_request.teacher_approved_by": res.locals.user._id,
+                "transfer_request.teacher_approved_date": new Date(),
+                "transfer_request.teacher_notes": teacher_notes || ""
+            }
+        );
+
+        return res.json({
+            success: true,
+            message: "Đã duyệt học viên thành công"
+        });
+
+    } catch (error) {
+        console.error("Error approving student:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Có lỗi xảy ra khi duyệt học viên",
+            error: error.message
+        });
+    }
+};
+
+// [POST] /admin/classes/:id/reject-student/:enrollmentId
+module.exports.rejectStudent = async (req, res) => {
+    try {
+        const classId = req.params.id;
+        const enrollmentId = req.params.enrollmentId;
+        const { teacher_notes } = req.body;
+
+        // Kiểm tra lớp học
+        const classData = await Class.findOne({ _id: classId, deleted: false });
+        if (!classData) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy lớp học"
+            });
+        }
+
+        // Kiểm tra quyền (chỉ giáo viên phụ trách mới được từ chối)
+        if (classData.instructor_id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({
+                success: false,
+                message: "Bạn không có quyền từ chối học viên cho lớp này"
+            });
+        }
+
+        // Kiểm tra enrollment
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+            class_id: classId,
+            status: "pending_teacher_approval",
+            deleted: false
+        });
+
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy yêu cầu đăng ký hợp lệ"
+            });
+        }
+
+        // Từ chối học viên
+        await Enrollment.updateOne(
+            { _id: enrollmentId },
+            {
+                status: "rejected",
+                "transfer_request.teacher_approved_by": req.user._id,
+                "transfer_request.teacher_approved_date": new Date(),
+                "transfer_request.teacher_notes": teacher_notes || ""
+            }
+        );
+
+        return res.json({
+            success: true,
+            message: "Đã từ chối học viên"
+        });
+
+    } catch (error) {
+        console.error("Error rejecting student:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Có lỗi xảy ra khi từ chối học viên",
+            error: error.message
+        });
     }
 };
 
@@ -513,11 +713,13 @@ module.exports.delete = async (req, res) => {
         );
 
         req.flash("success", "Xóa lớp học thành công");
-        res.redirect("back");
+        return res.status(200).json({ message: "Xóa lớp học thành công" });
+        // res.redirect("back");
     } catch (error) {
         console.error("Error deleting class:", error);
         req.flash("error", "Có lỗi xảy ra khi xóa lớp học");
-        res.redirect("back");
+        return res.status(500).json({ message: "Có lỗi xảy ra khi xóa lớp học" });
+        // res.redirect("back");
     }
 }; 
 
@@ -541,25 +743,77 @@ module.exports.manageLessons = async (req, res) => {
 };
 
 // [POST] /admin/classes/:id/lessons/add
+// module.exports.addLesson = async (req, res) => {
+//     try {
+//         const classId = req.params.id;
+//         const { lesson_name, content, video_url } = req.body;
+//         if (!lesson_name) {
+//             req.flash("error", "Tên bài học là bắt buộc");
+//             return res.redirect("back");
+//         }
+        
+//         // Xử lý file upload
+//         let fileData = null;
+//         if (req.body.file) {
+//             fileData = {
+//                 url: req.body.file.url,
+//                 public_id: req.body.file.public_id,
+//                 format: req.body.file.format,
+//                 size: req.body.file.size,
+//                 original_name: req.body.file.original_name || 'uploaded_file'
+//             };
+//         }
+        
+//         await Class.updateOne(
+//             { _id: classId },
+//             { $push: { lessons: { lesson_name, content, video_url, file: fileData } } }
+//         );
+//         req.flash("success", "Thêm bài học thành công");
+//         res.redirect("back");
+//     } catch (error) {
+//         console.error("Error adding lesson:", error);
+//         req.flash("error", "Có lỗi xảy ra khi thêm bài học");
+//         res.redirect("back");
+//     }
+// };
 module.exports.addLesson = async (req, res) => {
     try {
-        const classId = req.params.id;
-        const { lesson_name, content, video_url } = req.body;
-        if (!lesson_name) {
-            req.flash("error", "Tên bài học là bắt buộc");
-            return res.redirect("back");
+      const classId = req.params.id;
+      const { lesson_name, content, video_url } = req.body;
+  
+      if (!lesson_name) {
+        req.flash("error", "Tên bài học là bắt buộc");
+        return res.redirect("back");
+      }
+  
+      let fileData = null;
+      if (req.file) {
+        // Nếu bạn upload Cloudinary thì ở đây gọi cloudinary.uploader.upload_stream
+        fileData = {
+          url: `/uploads/${req.file.filename}`, // hoặc link Cloudinary
+          original_name: req.file.originalname,
+          size: req.file.size,
+          format: req.file.mimetype,
+        };
+      }
+  
+      await Class.updateOne(
+        { _id: classId },
+        {
+          $push: {
+            lessons: { lesson_name, content, video_url, file: fileData },
+          },
         }
-        await Class.updateOne(
-            { _id: classId },
-            { $push: { lessons: { lesson_name, content, video_url } } }
-        );
-        req.flash("success", "Thêm bài học thành công");
-        res.redirect("back");
+      );
+  
+      req.flash("success", "Thêm bài học thành công");
+      res.redirect("back");
     } catch (error) {
-        req.flash("error", "Có lỗi xảy ra khi thêm bài học");
-        res.redirect("back");
+      console.error("Error adding lesson:", error);
+      req.flash("error", "Có lỗi xảy ra khi thêm bài học");
+      res.redirect("back");
     }
-};
+  };
 
 // [POST] /admin/classes/:id/lessons/:lessonIndex/edit
 module.exports.editLesson = async (req, res) => {
@@ -576,6 +830,27 @@ module.exports.editLesson = async (req, res) => {
             req.flash("error", "Không tìm thấy bài học");
             return res.redirect("back");
         }
+        
+        // Xử lý file upload
+        if (req.body.file) {
+            // Xóa file cũ nếu có
+            if (classData.lessons[lessonIndex].file && classData.lessons[lessonIndex].file.public_id) {
+                try {
+                    await deleteFileFromCloudinary(classData.lessons[lessonIndex].file.public_id);
+                } catch (error) {
+                    console.error('Error deleting old file:', error);
+                }
+            }
+            
+            classData.lessons[lessonIndex].file = {
+                url: req.body.file.url,
+                public_id: req.body.file.public_id,
+                format: req.body.file.format,
+                size: req.body.file.size,
+                original_name: req.body.file.original_name || 'uploaded_file'
+            };
+        }
+        
         classData.lessons[lessonIndex].lesson_name = lesson_name;
         classData.lessons[lessonIndex].content = content;
         classData.lessons[lessonIndex].video_url = video_url;
@@ -583,6 +858,7 @@ module.exports.editLesson = async (req, res) => {
         req.flash("success", "Cập nhật bài học thành công");
         res.redirect("back");
     } catch (error) {
+        console.error("Error editing lesson:", error);
         req.flash("error", "Có lỗi xảy ra khi cập nhật bài học");
         res.redirect("back");
     }
@@ -598,12 +874,57 @@ module.exports.deleteLesson = async (req, res) => {
             req.flash("error", "Không tìm thấy bài học");
             return res.redirect("back");
         }
+        
+        // Xóa file nếu có
+        if (classData.lessons[lessonIndex].file && classData.lessons[lessonIndex].file.public_id) {
+            try {
+                await deleteFileFromCloudinary(classData.lessons[lessonIndex].file.public_id);
+            } catch (error) {
+                console.error('Error deleting file:', error);
+            }
+        }
+        
         classData.lessons.splice(lessonIndex, 1);
         await classData.save();
         req.flash("success", "Xóa bài học thành công");
         res.redirect("back");
     } catch (error) {
+        console.error("Error deleting lesson:", error);
         req.flash("error", "Có lỗi xảy ra khi xóa bài học");
+        res.redirect("back");
+    }
+}; 
+
+// [POST] /admin/classes/:id/lessons/:lessonIndex/delete-file
+module.exports.deleteLessonFile = async (req, res) => {
+    try {
+        const classId = req.params.id;
+        const lessonIndex = req.params.lessonIndex;
+        const classData = await Class.findById(classId);
+        if (!classData || !classData.lessons[lessonIndex]) {
+            req.flash("error", "Không tìm thấy bài học");
+            return res.redirect("back");
+        }
+        
+        // Xóa file nếu có
+        if (classData.lessons[lessonIndex].file && classData.lessons[lessonIndex].file.public_id) {
+            try {
+                await deleteFileFromCloudinary(classData.lessons[lessonIndex].file.public_id);
+                classData.lessons[lessonIndex].file = null;
+                await classData.save();
+                req.flash("success", "Xóa file thành công");
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                req.flash("error", "Có lỗi xảy ra khi xóa file");
+            }
+        } else {
+            req.flash("error", "Không có file để xóa");
+        }
+        
+        res.redirect("back");
+    } catch (error) {
+        console.error("Error deleting lesson file:", error);
+        req.flash("error", "Có lỗi xảy ra khi xóa file");
         res.redirect("back");
     }
 }; 

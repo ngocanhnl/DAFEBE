@@ -11,12 +11,12 @@ const PaymentResultPage = () => {
   useEffect(() => {
     const fetchPaymentResult = async () => {
       try {
-        // Nếu bạn dùng cookie để lưu token thì không cần header này
-        // Nếu dùng Bearer token thì cần thêm header Authorization
-        const res = await axios.get(`http://localhost:8080/ApartManagement/api/vnpay-return${search}`, {
+        // Gọi API vnpay-return mới
+        const res = await axios.get(`http://localhost:4000/api/vnpay-return${search}`, {
           withCredentials: true, // nếu dùng cookie chứa token
           // headers: { Authorization: `Bearer ${token}` }, // nếu dùng Bearer token
         });
+        console.log(res.data)
 
         setStatus(res.data.status);
         setMessage(res.data.message);

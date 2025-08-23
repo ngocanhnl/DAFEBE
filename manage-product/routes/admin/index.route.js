@@ -4,6 +4,8 @@ const courseRoutes = require("./course.route");
 const courseCategoryRoutes = require("./course-category.route");
 const roleRoutes = require("./role.route");
 const accountRoutes = require("./account.route");
+const userRoutes = require("./user.route");
+const livestreamRoutes = require("./livestream.route");
 const authRoutes = require("./auth.route");
 const myAccountRoutes = require("./myAccount.route");
 const settingRoutes = require("./setting.route");
@@ -12,6 +14,8 @@ const enrollmentRoutes = require("./enrollment.route");
 const attendanceRoutes = require("./attendance.route");
 const revenueRoutes = require("./revenue.route");
 const teachingHistoryRoutes = require("./teaching-history.route");
+
+const controller = require("../../controllers/admin/livestream.controller");
 
 
 const authMiddleware = require("../../middlewares/admin/auth.middleware");
@@ -40,6 +44,10 @@ module.exports = (app)=>{
 
     app.use(PATH_ADMIN + "/accounts",authMiddleware.requireAuth,accountRoutes);
 
+    app.use(PATH_ADMIN + "/users",authMiddleware.requireAuth,userRoutes);
+
+    app.use(PATH_ADMIN + "/livestream",authMiddleware.requireAuth,livestreamRoutes);
+
     app.use(PATH_ADMIN + "/auth",authRoutes);
 
     app.use(PATH_ADMIN + "/my-account", authMiddleware.requireAuth, myAccountRoutes);
@@ -47,5 +55,7 @@ module.exports = (app)=>{
     app.use(PATH_ADMIN + "/settings", authMiddleware.requireAuth, settingRoutes);
 
     app.use(PATH_ADMIN + "/teaching-history", authMiddleware.requireAuth, teachingHistoryRoutes);
+
+    app.use("/oauth2callback", controller.oauthCallback)
 
 }

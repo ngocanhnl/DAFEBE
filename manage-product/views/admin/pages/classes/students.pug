@@ -2,66 +2,162 @@ extends ../../layouts/default
 
 block main
   .d-flex.justify-content-between.align-items-center.mb-4
-    h1 Danh sách học viên
-    .btn-group
-      a.btn.btn-secondary(href=`/admin/classes/detail/${classData._id}`)
-        i.fas.fa-arrow-left.me-2
-        | Quay lại chi tiết lớp
+    h1 Danh sách học viên - #{classData.class_name}
+    a.btn.btn-secondary(href=`/${prefixAdmin}/classes`) ← Quay lại
 
-  // Thông tin lớp học
-  .card.mb-4
-    .card-header
-      h5.mb-0 Thông tin lớp học
-    .card-body
-      .row
-        .col-md-6
-          p
-            strong Lớp học: 
-            span #{classData.class_name}
-          p
-            strong Khóa học: 
-            a(href=`/admin/courses/${classData.course_id._id}`) #{classData.course_id.title}
-          p
-            strong Giảng viên: 
-            span #{classData.instructor_id && classData.instructor_id.fullName || 'Chưa cập nhật'}
-        .col-md-6
-          - const enrolledCount = enrollments ? enrollments.length : 0
-          p
-            strong Sĩ số: 
-            span #{enrolledCount}/#{classData.max_students}
-          p
-            strong Ngày khai giảng: 
-            span #{classData.start_date ? new Date(classData.start_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
-          p
-            strong Địa điểm: 
-            span #{classData.location || 'Chưa cập nhật'}
+  .row
+    .col-md-8
+      .card
+        .card-header
+          h5.mb-0 Học viên đã được duyệt (#{approvedEnrollments.length})
+        .card-body
+          if approvedEnrollments && approvedEnrollments.length > 0
+            .table-responsive
+              table.table.table-striped
+                thead
+                  tr
+                    th Họ tên
+                    th Email
+                    th Số điện thoại
+                    th Ngày đăng ký
+                    th Trạng thái thanh toán
+                tbody
+                  each enrollment in approvedEnrollments
+                    tr
+                      td
+                        strong= enrollment.student_id.fullName
+                      td= enrollment.student_id.email
+                      td= enrollment.student_id.phone || 'Chưa cập nhật'
+                      td= moment(enrollment.enrollment_date).format('DD/MM/YYYY HH:mm')
+                      td
+                        if enrollment.payment_status === 'paid'
+                          span.badge.badge-success Đã thanh toán
+                        else if enrollment.payment_status === 'pending'
+                          span.badge.badge-warning Chờ thanh toán
+                        else
+                          span.badge.badge-info Đã hoàn tiền
+          else
+            .alert.alert-info Không có học viên nào
 
-  // Danh sách học viên
-  .card
-    .card-header
-      h5.mb-0 Học viên đã đăng ký
-    .card-body
-      if !enrollments || enrollments.length === 0
-        .text-center.py-4
-          i.fas.fa-inbox.fa-3x.text-muted.mb-3
-          h5.text-muted Chưa có học viên nào trong lớp
-      else
-        .table-responsive
-          table.table.table-striped.table-hover
-            thead.table-light
-              tr
-                th #
-                th Họ và tên
-                th Email
-                th Số điện thoại
-                th Ngày đăng ký
-            tbody
-              each enrollment, idx in enrollments
-                tr
-                  td #{idx + 1}
-                  td #{enrollment.student_id ? enrollment.student_id.fullName : 'Không rõ'}
-                  td #{enrollment.student_id ? enrollment.student_id.email : ''}
-                  td #{enrollment.student_id ? enrollment.student_id.phone : ''}
-                  td #{enrollment.createdAt ? new Date(enrollment.createdAt).toLocaleDateString('vi-VN') : ''}
+    .col-md-4
+      .card
+        .card-header
+          h5.mb-0 Học viên chờ giáo viên duyệt (#{pendingTeacherApprovalEnrollments.length})
+        .card-body
+          if pendingTeacherApprovalEnrollments && pendingTeacherApprovalEnrollments.length > 0
+            each enrollment in pendingTeacherApprovalEnrollments
+              .card.mb-3
+                .card-body
+                  h6.card-title= enrollment.student_id.fullName
+                  p.card-text
+                    small.text-muted= enrollment.student_id.email
+                    br
+                    small.text-muted= enrollment.student_id.phone || 'Chưa cập nhật'
+                    br
+                    small.text-muted= `Đăng ký: ${moment(enrollment.enrollment_date).format('DD/MM/YYYY HH:mm')}`
+                  
+                  .btn-group.btn-group-sm
+                    button.btn.btn-success.approve-student-btn(
+                      data-enrollment-id=enrollment._id
+                      data-student-name=enrollment.student_id.fullName
+                    )
+                      i.fas.fa-check.mr-1
+                      | Duyệt
+                    button.btn.btn-danger.reject-student-btn(
+                      data-enrollment-id=enrollment._id
+                      data-student-name=enrollment.student_id.fullName
+                    )
+                      i.fas.fa-times.mr-1
+                      | Từ chối
+          else
+            .alert.alert-info Không có học viên chờ duyệt
+
+  // Modal cho ghi chú
+  .modal.fade#teacherNotesModal(tabindex="-1")
+    .modal-dialog
+      .modal-content
+        .modal-header
+          h5.modal-title#modalTitle Ghi chú
+          button.close(type="button" data-dismiss="modal")
+            span &times;
+        .modal-body
+          .form-group
+            label(for="teacherNotes") Ghi chú (tùy chọn):
+            textarea#teacherNotes.form-control(rows="3" placeholder="Nhập ghi chú...")
+        .modal-footer
+          button.btn.btn-secondary(type="button" data-dismiss="modal") Hủy
+          button.btn.btn-primary#confirmAction(type="button") Xác nhận
+
+
+  script.
+    let currentAction = '';
+    let currentEnrollmentId = '';
+
+    // Xử lý nút duyệt học viên
+    document.querySelectorAll('.approve-student-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const enrollmentId = this.getAttribute('data-enrollment-id');
+        const studentName = this.getAttribute('data-student-name');
+        
+        currentAction = 'approve';
+        currentEnrollmentId = enrollmentId;
+        
+        document.getElementById('modalTitle').textContent = `Duyệt học viên: ${studentName}`;
+        document.getElementById('teacherNotes').value = '';
+        $('#teacherNotesModal').modal('show');
+      });
+    });
+
+    // Xử lý nút từ chối học viên
+    document.querySelectorAll('.reject-student-btn').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const enrollmentId = this.getAttribute('data-enrollment-id');
+        const studentName = this.getAttribute('data-student-name');
+        
+        currentAction = 'reject';
+        currentEnrollmentId = enrollmentId;
+        
+        document.getElementById('modalTitle').textContent = `Từ chối học viên: ${studentName}`;
+        document.getElementById('teacherNotes').value = '';
+        $('#teacherNotesModal').modal('show');
+      });
+    });
+
+    // Xử lý xác nhận hành động
+    document.getElementById('confirmAction').addEventListener('click', function() {
+      const teacherNotes = document.getElementById('teacherNotes').value;
+      const classId = '#{classData._id}';
+      
+      const url = currentAction === 'approve' 
+        ? `/admin/classes/${classId}/approve-student/${currentEnrollmentId}`
+        : `/admin/classes/${classId}/reject-student/${currentEnrollmentId}`;
+      
+      const actionText = currentAction === 'approve' ? 'duyệt' : 'từ chối';
+      
+      if (confirm(`Bạn có chắc chắn muốn ${actionText} học viên này?`)) {
+        fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ teacher_notes: teacherNotes })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(data.message);
+            window.location.reload();
+          } else {
+            alert('Lỗi: ' + data.message);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Có lỗi xảy ra khi xử lý yêu cầu');
+        });
+      }
+      
+      $('#teacherNotesModal').modal('hide');
+    });
 
 

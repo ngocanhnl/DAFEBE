@@ -1,0 +1,107 @@
+extends ../../layouts/default.pug
+
+block main
+  h1(class="mb-4") Chi tiết người dùng
+
+  .card
+    .card-body
+      .row
+        .col-md-4.text-center
+          if data.avatar
+            img(
+              src=data.avatar
+              alt=data.fullName
+              class="img-fluid rounded-circle mb-3"
+              style="width: 200px; height: 200px; object-fit: cover;"
+            )
+          else
+            .bg-secondary.text-white.rounded-circle.d-flex.align-items-center.justify-content-center.mx-auto.mb-3(
+              style="width: 200px; height: 200px;"
+            )
+              i.fas.fa-user(style="font-size: 4rem;")
+          
+          .mt-3
+            a(
+              href=`/${prefixAdmin}/users/edit/${data.id}`
+              class="btn btn-warning"
+            ) Chỉnh sửa
+            a(
+              href=`/${prefixAdmin}/users`
+              class="btn btn-secondary ml-2"
+            ) Quay lại
+        
+        .col-md-8
+          h4 Thông tin cơ bản
+          table.table.table-borderless
+            tr
+              td(width="150") <strong>Họ tên:</strong>
+              td #{data.fullName}
+            tr
+              td <strong>Email:</strong>
+              td #{data.email}
+            tr
+              td <strong>Số điện thoại:</strong>
+              td #{data.phone || 'Chưa cập nhật'}
+            tr
+              td <strong>Trạng thái:</strong>
+              td
+                if (data.status === "active")
+                  span.badge.badge-success Hoạt động
+                else
+                  span.badge.badge-danger Dừng hoạt động
+            tr
+              td <strong>Trạng thái online:</strong>
+              td
+                if (data.statusOnline === "online")
+                  span.badge.badge-success Online
+                else
+                  span.badge.badge-secondary Offline
+          
+          hr
+          
+          h4 Thông tin xác thực
+          table.table.table-borderless
+            tr
+              td(width="150") <strong>Xác thực email:</strong>
+              td
+                if (data.email_verified)
+                  span.badge.badge-success Đã xác thực
+                else
+                  span.badge.badge-warning Chưa xác thực
+            tr
+              td <strong>Xác thực số điện thoại:</strong>
+              td
+                if (data.phone_verified)
+                  span.badge.badge-success Đã xác thực
+                else
+                  span.badge.badge-warning Chưa xác thực
+          
+          hr
+          
+          h4 Thông tin hệ thống
+          table.table.table-borderless
+            tr
+              td(width="150") <strong>Ngày tạo:</strong>
+              td #{moment(data.createdAt).format("DD/MM/YYYY HH:mm:ss")}
+            tr
+              td <strong>Ngày cập nhật:</strong>
+              td #{moment(data.updatedAt).format("DD/MM/YYYY HH:mm:ss")}
+            tr
+              td <strong>Token:</strong>
+              td
+                code.text-break #{data.tokenUser}
+          
+          if data.friendList && data.friendList.length > 0
+            hr
+            h4 Danh sách bạn bè
+            p Số lượng bạn bè: #{data.friendList.length}
+          
+          if data.acceptFriends && data.acceptFriends.length > 0
+            hr
+            h4 Danh sách chấp nhận kết bạn
+            p Số lượng: #{data.acceptFriends.length}
+          
+          if data.requestFriends && data.requestFriends.length > 0
+            hr
+            h4 Danh sách yêu cầu kết bạn
+            p Số lượng: #{data.requestFriends.length}

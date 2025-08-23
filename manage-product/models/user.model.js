@@ -10,6 +10,17 @@ const userSchema = new mongoose.Schema({
         default: generate.generateRandomString(30)
     },
     phone: String,
+    email_verified: {
+        type: Boolean,
+        default: false
+    },
+    phone_verified: {
+        type: Boolean,
+        default: false
+    },
+    email_verification_token: String,
+    phone_verification_otp: String,
+    otp_expires_at: Date,
     friendList: [
         {
           user_id: String,
