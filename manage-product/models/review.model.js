@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 
 const reviewSchema = new mongoose.Schema({
     course_id: String,
-    student_id: String,
+    student_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+    },
     class_id: String, // Nếu đánh giá cho lớp cụ thể
     rating: {
         type: Number,
@@ -15,7 +19,7 @@ const reviewSchema = new mongoose.Schema({
     status: {
         type: String,
         enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
+        default: 'approved'
     },
     approved_by: String, // ID của admin duyệt
     approved_date: Date,

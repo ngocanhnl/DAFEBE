@@ -33,16 +33,16 @@ block main
           option(value="") -- Chọn danh mục khóa học --
             +selectTree(records,1,course.course_category_id)
 
-      div(class="form-group")
-        label(for="instructor") Giảng viên
-        input(
-          type="text"
-          class="form-control"
-          id="instructor"
-          name="instructor"
-          required
-          value=course.instructor
-        )
+      //- div(class="form-group")
+      //-   label(for="instructor") Giảng viên
+      //-   input(
+      //-     type="text"
+      //-     class="form-control"
+      //-     id="instructor"
+      //-     name="instructor"
+      //-     required
+      //-     value=course.instructor
+      //-   )
       div(class="form-group")
         label(for="level") Cấp độ
         select(

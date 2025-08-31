@@ -51,6 +51,8 @@ block main
                       span.badge.badge-warning Chờ duyệt
                     else if request.transfer_request.status === 'pending_teacher_approval'
                       span.badge.badge-info Chờ giáo viên duyệt
+                    else if request.transfer_request.status === 'pending_admin_approval'
+                      span.badge.badge-info Chờ quản trị viên duyệt
                     else if request.transfer_request.status === 'approved'
                       span.badge.badge-success Đã duyệt
                     else if request.transfer_request.status === 'rejected'

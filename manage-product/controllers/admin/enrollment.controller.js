@@ -1,3 +1,4 @@
+
 const Enrollment = require("../../models/enrollment.model");
 const Class = require("../../models/class.model");
 const Account = require("../../models/account.model");
@@ -107,6 +108,46 @@ module.exports.getTransferRequestDetail = async (req, res) => {
         res.redirect("back");
     }
 };
+
+// [POST] /admin/enrollments/transfer-requests/:id/Adminapprove
+module.exports.adminApproveTransferRequest = async (req, res) => {
+    try {
+        const enrollmentId = req.params.id;
+        const enrollment = await Enrollment.findOne({
+            _id: enrollmentId,
+            "transfer_request.requested": true,
+            "transfer_request.status": "pending_admin_approval",
+            deleted: false
+        })
+        .populate([
+            { path: "class_id", select: "status instructor_id" },
+            { path: "transfer_request.target_class_id", select: "status instructor_id" }
+        ]);
+
+        if (!enrollment) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy yêu cầu chuyển lớp hợp lệ"
+            });
+        }
+
+        // Chuyển trạng thái sang pending_teacher_approval
+        await Enrollment.updateOne(
+            { _id: enrollmentId },
+            {
+                "transfer_request.status": "pending_teacher_approval",
+                "transfer_request.approved_by": res.locals.user._id,
+                "transfer_request.approved_date": new Date(),
+                "transfer_request.notes": req.body.notes || ""
+            }
+        );
+
+        return res.json({ success: true, message: "Đã chuyển sang chờ giáo viên duyệt." });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message });
+    }
+};
+
 
 // [POST] /admin/enrollments/transfer-requests/:id/approve
 module.exports.approveTransferRequest = async (req, res) => {

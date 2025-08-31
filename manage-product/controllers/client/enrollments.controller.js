@@ -91,7 +91,7 @@ module.exports.requestClassTransfer = async (req, res) => {
         }
 
         // Kiểm tra xem đã có yêu cầu chuyển lớp chưa
-        if (currentEnrollment.transfer_request.requested) {
+        if (currentEnrollment.transfer_request.requested && currentEnrollment.transfer_request.status !== "approved") {
             return res.status(400).json({
                 success: false,
                 message: "Bạn đã có yêu cầu chuyển lớp đang chờ duyệt"
@@ -101,7 +101,8 @@ module.exports.requestClassTransfer = async (req, res) => {
         // Xác định trạng thái dựa trên trạng thái lớp đích
         let transferStatus = "pending";
         if (targetClass.status === "ongoing") {
-            transferStatus = "pending_teacher_approval";
+            // transferStatus = "pending_teacher_approval";
+            transferStatus = "pending_admin_approval";
         }
 
         // Cập nhật yêu cầu chuyển lớp

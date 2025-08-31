@@ -166,7 +166,45 @@ block main
           | Yêu cầu đã được admin duyệt. Học viên cần được giáo viên phụ trách lớp đích duyệt để vào lớp.
           br
           | Vui lòng vào trang "Danh sách học viên" của lớp #{enrollment.transfer_request.target_class_id.class_name} để duyệt.
-
+  if enrollment.transfer_request.status === 'pending_admin_approval'
+    .card.mt-4
+      .card-header
+        h5 Thông báo
+      .card-body
+        .alert.alert-info.mb-3
+          i.fas.fa-info-circle.mr-2
+          | Yêu cầu cần admin duyệt. 
+        button.btn.btn-success#adminApproveBtn(data-id=enrollment._id)
+          i.fas.fa-check.mr-2
+          | Duyệt yêu cầu (Admin)
+        script.
+          document.addEventListener('DOMContentLoaded', function() {
+            const adminApproveBtn = document.getElementById('adminApproveBtn');
+            if (adminApproveBtn) {
+              adminApproveBtn.addEventListener('click', function() {
+                const enrollmentId = this.getAttribute('data-id');
+                if (confirm('Bạn có chắc chắn muốn duyệt yêu cầu này?')) {
+                  fetch(`/admin/enrollments/transfer-requests/${enrollmentId}/Adminapprove`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                  })
+                  .then(response => response.json())
+                  .then(data => {
+                    if (data.success) {
+                      alert(data.message);
+                      window.location.reload();
+                    } else {
+                      alert('Lỗi: ' + data.message);
+                    }
+                  })
+                  .catch(error => {
+                    alert('Có lỗi xảy ra khi xử lý yêu cầu');
+                  });
+                }
+              });
+            }
+          });
+          
   if enrollment.transfer_request.teacher_approved_by
     .card.mt-4
       .card-header

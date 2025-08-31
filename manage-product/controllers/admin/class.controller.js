@@ -41,6 +41,14 @@ module.exports.index = async (req, res) => {
         if (req.query.status) {
             filterQuery.status = req.query.status;
         }
+        const teacherRole = await Role.findOne({ title: "teacher" });
+
+        if (teacherRole && res.locals.user.role_id.toString() === teacherRole._id.toString()) {
+            filterQuery.instructor_id = res.locals.user._id;
+        }
+        console.log("User role_id:", res.locals.user.role_id.toString());
+        console.log("Teacher role_id:", teacherRole._id.toString());
+
 
         const page = parseInt(req.query.page) || 1;
         const limit = 10;

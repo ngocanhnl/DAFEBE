@@ -31,6 +31,7 @@ module.exports.login = async (req, res) => {
         if (!user.email_verified && !user.phone_verified) {
             return res.status(403).json({ success: false, message: "Tài khoản chưa xác thực. Vui lòng xác thực email hoặc số điện thoại." });
         }
+       
 
         return res.json({ success: true, token: user.tokenUser });
     } catch (error) {

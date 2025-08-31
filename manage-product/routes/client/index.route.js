@@ -6,6 +6,8 @@ const userRoutes = require("./user.route");
 const livestreamRoutes = require("./livestream.route");
 const authController = require("../../controllers/client/auth.controller");
 const chatbotRoute = require("./chatbot.route");
+const reviewRoute = require("./review.route");
+const authMiddleware = require("../../middlewares/client/auth.middleware");
 
 module.exports = (app) => {
     const PATH_API = "/api";
@@ -18,6 +20,7 @@ module.exports = (app) => {
     app.use(PATH_API, userRoutes);
     app.use(PATH_API + "/livestream", livestreamRoutes);
     app.use(PATH_API + "/chatbot", chatbotRoute);
+    app.use(PATH_API + "/review",reviewRoute);
 };
 
 

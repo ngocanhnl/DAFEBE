@@ -10,7 +10,7 @@ block main
     .card-header
       h5.mb-0 Thông tin lớp học
     .card-body
-      form(action=`/admin/classes/${classItem && classItem._id || ''}/edit` method="POST")
+      form(action=`/admin/classes/edit/${classItem && classItem._id || ''}?_method=PATCH` method="POST")
         .row
           .col-md-6
             .mb-3
@@ -159,15 +159,15 @@ block main
 
   script.
     // Set min date for start_date
-    const startDateInput = document.querySelector('[name="start_date"]');
-    const endDateInput = document.querySelector('[name="end_date"]');
-    const today = new Date().toISOString().split('T')[0];
-    startDateInput.min = today;
+    //- const startDateInput = document.querySelector('[name="start_date"]');
+    //- const endDateInput = document.querySelector('[name="end_date"]');
+    //- const today = new Date().toISOString().split('T')[0];
+    //- startDateInput.min = today;
     
     // Update end_date min when start_date changes
-    startDateInput.addEventListener('change', function() {
-      endDateInput.min = this.value;
-    });
+    //- startDateInput.addEventListener('change', function() {
+    //-   endDateInput.min = this.value;
+    //- });
     
     // Form validation
     document.querySelector('form').addEventListener('submit', function(e) {

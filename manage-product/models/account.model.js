@@ -10,7 +10,11 @@ const accountSchema = new mongoose.Schema({
         default: generate.generateRandomString(30)
     },
     phone: String,
-    role_id: String,
+    role_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Role", // hoặc "Instructor" nếu bạn đặt tên model như vậy
+            required: true
+    },
     status: String,
     email_verified: {
         type: Boolean,

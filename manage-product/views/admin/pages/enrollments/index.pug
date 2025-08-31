@@ -39,7 +39,7 @@ block main
               each enrollment in enrollments
                 tr
                   td
-                    strong= enrollment.student_id.fullName
+                    strong= enrollment.student_id.fullName || 'Delete'
                     br
                     small.text-muted= enrollment.student_id.email
                     if enrollment.student_id.phone
