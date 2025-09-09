@@ -18,6 +18,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import VerifyEmail from "./components/VerifyEmail";
 import VerifyOtp from "./components/VerifyOtp";
+import ForgotPassword from "./components/ForgotPassword";
 import MyUserReducer from "./reducers/MyUserReducer";
 import InvoiceReducer from "./reducers/MyInvoiceReducer";
 import Profile from "./components/Profile";
@@ -60,6 +61,7 @@ const App = () => {
                   <Route path="/register" element={<Register />} />
                   <Route path="/verify-email" element={<VerifyEmail />} />
                   <Route path="/verify-otp" element={<VerifyOtp />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/courses" element={<CourseList />} />
                   <Route path="/courses/:id" element={<CourseDetail />} />
                   <Route path="/cart" element={<Cart />} />

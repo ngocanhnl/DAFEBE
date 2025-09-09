@@ -38,9 +38,12 @@ router.post("/:id/reject-student/:enrollmentId", controller.rejectStudent);
 router.patch("/:id/change-instructor", controller.changeInstructor);
 
 router.get('/:id/lessons/manage', controller.manageLessons);
+// router.post('/:id/lessons/add', uploadFile.single('lesson_file'), uploadFileMiddleware.uploadFile, controller.addLesson);
 router.post('/:id/lessons/add', uploadFile.single('lesson_file'), uploadFileMiddleware.uploadFile, controller.addLesson);
 router.post('/:id/lessons/:lessonIndex/edit', upload.single('lesson_file'), uploadFileMiddleware.uploadFile, controller.editLesson);
 router.post('/:id/lessons/:lessonIndex/delete', controller.deleteLesson);
 router.post('/:id/lessons/:lessonIndex/delete-file', controller.deleteLessonFile);
+
+// router.get("/download/lesson-files/:publicId", controller.downloadFile);
 
 module.exports = router; 

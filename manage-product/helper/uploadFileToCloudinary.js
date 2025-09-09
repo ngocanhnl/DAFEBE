@@ -28,10 +28,17 @@ let streamUpload = (buffer, resourceType = 'auto') => {
 
 module.exports = async (buffer, resourceType = 'auto') => {
     let result = await streamUpload(buffer, resourceType);
-    return {
-        url: result.url,
+    // return {
+    //     url: result.url,
+    //     public_id: result.public_id,
+    //     format: result.format,
+    //     size: result.bytes
+    // };
+     return {
+        url: result.secure_url, 
         public_id: result.public_id,
         format: result.format,
-        size: result.bytes
+        size: result.bytes,
+        resource_type: result.resource_type
     };
 }

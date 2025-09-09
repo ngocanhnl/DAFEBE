@@ -17,6 +17,8 @@ export const endpoints = {
     'verifyEmail': (token) => `/verify-email?token=${token}`,
     'sendOtp': '/send-otp',
     'verifyOtp': '/verify-otp',
+    'resetPassword': '/reset-password',
+    'checkOtp': '/check-otp',
     'profile': '/me',
     'updateProfile': '/me/update',
 

@@ -1,3 +1,5 @@
+
+
 const Class = require("../../models/class.model");
 const Course = require("../../models/course.model");
 const Account = require("../../models/account.model");
@@ -5,6 +7,7 @@ const Enrollment = require("../../models/enrollment.model");
 const Role = require("../../models/role.model");
 const systemConfig = require("../../config/system");
 const deleteFileFromCloudinary = require("../../helper/deleteFileFromCloudinary");
+const { default: mongoose } = require("mongoose");
 
 // [GET] /admin/classes/:id/chat
 module.exports.viewChat = async (req, res) => {
@@ -117,11 +120,27 @@ module.exports.create = async (req, res) => {
 
         const courses = await Course.find({ deleted: false, status: "active" });
         const teacherRoleId = await Role.findOne({ title: "teacher" });
+        console.log("Teacher Role ID:", teacherRoleId);
+        const count = await Account.countDocuments({});
+console.log("Total accounts in DB:", count);
+
         const instructors = await Account.find({ 
             deleted: false, 
             status: "active",
-            role_id: teacherRoleId._id
+            role_id: teacherRoleId._id.toString()
+
         });
+        console.log("Instructors:", instructors);
+
+        const allAccounts = await Account.find({}, "fullName role_id status deleted");
+        console.log("All Accounts:", allAccounts.map(a => ({
+        fullName: a.fullName,
+        role_id: a.role_id.toString(),
+        status: a.status,
+        deleted: a.deleted
+        })));
+
+console.log("Teacher Role ID:", teacherRoleId._id.toString());
 
         res.render("admin/pages/classes/create", {
             pageTitle: "Chỉnh sửa lớp học",
@@ -136,26 +155,6 @@ module.exports.create = async (req, res) => {
     }
 };
 
-
-// [POST] /admin/classes/create
-// module.exports.createPost = async (req, res) => {
-//     try {
-//         const classData = {
-//             ...req.body,
-//             status: req.body.status || "active"
-//         };
-
-//         const newClass = new Class(classData);
-//         await newClass.save();
-
-//         req.flash("success", "Tạo lớp học thành công");
-//         res.redirect(`/${systemConfig.prefixAdmin}/classes`);
-//     } catch (error) {
-//         console.error("Error creating class:", error);
-//         req.flash("error", "Có lỗi xảy ra khi tạo lớp học");
-//         res.redirect("back");
-//     }
-// };
 
 
 // [POST] /admin/classes/create
@@ -740,6 +739,7 @@ module.exports.manageLessons = async (req, res) => {
             req.flash("error", "Không tìm thấy lớp học");
             return res.redirect("/admin/classes");
         }
+        console.log("Class Data:", classData);
         res.render("admin/pages/classes/lessons-manage", {
             pageTitle: "Quản lý bài học",
             classData
@@ -749,79 +749,76 @@ module.exports.manageLessons = async (req, res) => {
         res.redirect("/admin/classes");
     }
 };
+module.exports.addLesson = async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { lesson_name, content, video_url } = req.body;
 
-// [POST] /admin/classes/:id/lessons/add
+    if (!lesson_name) {
+      req.flash("error", "Tên bài học là bắt buộc");
+      return res.redirect("back");
+    }
+
+    // Lấy file từ middleware
+    let fileData = req.lessonFile || null;
+    console.log("Uploaded file data:", fileData);
+
+    await Class.updateOne(
+      { _id: classId },
+      {
+        $push: {
+          lessons: { lesson_name, content, video_url, file: fileData },
+        },
+      }
+    );
+
+    req.flash("success", "Thêm bài học thành công");
+    res.redirect("back");
+  } catch (error) {
+    console.error("Error adding lesson:", error);
+    req.flash("error", "Có lỗi xảy ra khi thêm bài học");
+    res.redirect("back");
+  }
+};
+
 // module.exports.addLesson = async (req, res) => {
 //     try {
-//         const classId = req.params.id;
-//         const { lesson_name, content, video_url } = req.body;
-//         if (!lesson_name) {
-//             req.flash("error", "Tên bài học là bắt buộc");
-//             return res.redirect("back");
+//       const classId = req.params.id;
+//       const { lesson_name, content, video_url, lesson_file  } = req.body;
+  
+//       if (!lesson_name) {
+//         req.flash("error", "Tên bài học là bắt buộc");
+//         return res.redirect("back");
+//       }
+
+//       let fileData = lesson_file || null;
+//     //   if (req.file) {
+//     //     // Nếu bạn upload Cloudinary thì ở đây gọi cloudinary.uploader.upload_stream
+//     //     fileData = {
+//     //       url: `/uploads/${req.file.filename}`, // hoặc link Cloudinary
+//     //       original_name: req.file.originalname,
+//     //       size: req.file.size,
+//     //       format: req.file.mimetype,
+//     //     };
+//     //   }
+  
+//       await Class.updateOne(
+//         { _id: classId },
+//         {
+//           $push: {
+//             lessons: { lesson_name, content, video_url, file: fileData },
+//           },
 //         }
-        
-//         // Xử lý file upload
-//         let fileData = null;
-//         if (req.body.file) {
-//             fileData = {
-//                 url: req.body.file.url,
-//                 public_id: req.body.file.public_id,
-//                 format: req.body.file.format,
-//                 size: req.body.file.size,
-//                 original_name: req.body.file.original_name || 'uploaded_file'
-//             };
-//         }
-        
-//         await Class.updateOne(
-//             { _id: classId },
-//             { $push: { lessons: { lesson_name, content, video_url, file: fileData } } }
-//         );
-//         req.flash("success", "Thêm bài học thành công");
-//         res.redirect("back");
+//       );
+  
+//       req.flash("success", "Thêm bài học thành công");
+//       res.redirect("back");
 //     } catch (error) {
-//         console.error("Error adding lesson:", error);
-//         req.flash("error", "Có lỗi xảy ra khi thêm bài học");
-//         res.redirect("back");
+//       console.error("Error adding lesson:", error);
+//       req.flash("error", "Có lỗi xảy ra khi thêm bài học");
+//       res.redirect("back");
 //     }
-// };
-module.exports.addLesson = async (req, res) => {
-    try {
-      const classId = req.params.id;
-      const { lesson_name, content, video_url } = req.body;
-  
-      if (!lesson_name) {
-        req.flash("error", "Tên bài học là bắt buộc");
-        return res.redirect("back");
-      }
-  
-      let fileData = null;
-      if (req.file) {
-        // Nếu bạn upload Cloudinary thì ở đây gọi cloudinary.uploader.upload_stream
-        fileData = {
-          url: `/uploads/${req.file.filename}`, // hoặc link Cloudinary
-          original_name: req.file.originalname,
-          size: req.file.size,
-          format: req.file.mimetype,
-        };
-      }
-  
-      await Class.updateOne(
-        { _id: classId },
-        {
-          $push: {
-            lessons: { lesson_name, content, video_url, file: fileData },
-          },
-        }
-      );
-  
-      req.flash("success", "Thêm bài học thành công");
-      res.redirect("back");
-    } catch (error) {
-      console.error("Error adding lesson:", error);
-      req.flash("error", "Có lỗi xảy ra khi thêm bài học");
-      res.redirect("back");
-    }
-  };
+//   };
 
 // [POST] /admin/classes/:id/lessons/:lessonIndex/edit
 module.exports.editLesson = async (req, res) => {

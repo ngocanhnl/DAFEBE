@@ -203,3 +203,55 @@ module.exports.verifyOtp = async (req, res) => {
     }
 };
 
+// [POST] /reset-password
+module.exports.resetPassword = async (req, res) => {
+    try {
+        const { email, otp, password } = req.body || {};
+        if (!email || !otp || !password) return res.status(400).json({ success: false, message: "Thiếu dữ liệu" });
+
+        const user = await User.findOne({ email, deleted: false });
+        if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+
+        if (!user.phone_verification_otp || !user.otp_expires_at) {
+            return res.status(400).json({ success: false, message: "Chưa yêu cầu OTP" });
+        }
+        if (new Date(user.otp_expires_at).getTime() < Date.now()) {
+            return res.status(400).json({ success: false, message: "OTP đã hết hạn" });
+        }
+        if (user.phone_verification_otp !== otp) {
+            return res.status(400).json({ success: false, message: "OTP không đúng" });
+        }
+
+        await User.updateOne({ _id: user._id }, { $set: { password: md5(password) }, $unset: { phone_verification_otp: 1, otp_expires_at: 1 } });
+
+        return res.json({ success: true, message: "Đổi mật khẩu thành công" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Reset password error", error: error.message });
+    }
+};
+
+// [POST] /check-otp (validate OTP without consuming it)
+module.exports.checkOtp = async (req, res) => {
+    try {
+        const { phone, email, otp } = req.body || {};
+        if (!otp || (!phone && !email)) return res.status(400).json({ success: false, message: "Thiếu dữ liệu" });
+
+        const user = await User.findOne({ $or: [ { phone }, { email } ], deleted: false });
+        if (!user) return res.status(404).json({ success: false, message: "Không tìm thấy người dùng" });
+
+        if (!user.phone_verification_otp || !user.otp_expires_at) {
+            return res.status(400).json({ success: false, message: "Chưa yêu cầu OTP" });
+        }
+        if (new Date(user.otp_expires_at).getTime() < Date.now()) {
+            return res.status(400).json({ success: false, message: "OTP đã hết hạn" });
+        }
+        if (user.phone_verification_otp !== otp) {
+            return res.status(400).json({ success: false, message: "OTP không đúng" });
+        }
+
+        return res.json({ success: true, message: "OTP hợp lệ" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: "Check OTP error", error: error.message });
+    }
+};
+

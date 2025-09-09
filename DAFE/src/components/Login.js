@@ -67,6 +67,7 @@ const Login = () => {
                     <Button type="submit" variant="success" className="me-2">Đăng nhập</Button>
                     <Link to="/register" className="me-2">Đăng ký</Link>
                     <Link to="/verify-otp">Xác thực OTP</Link>
+                    <Link to="/forgot-password" className="ms-2">Quên mật khẩu</Link>
                 </Form.Group>}
                 
             </Form>

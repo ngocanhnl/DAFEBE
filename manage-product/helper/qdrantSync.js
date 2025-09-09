@@ -78,6 +78,11 @@ async function syncCoursesToQdrant() {
 
       const category = await CourseCategory.findById(course.course_category_id);
       const instructor = cls.instructor_id;
+      const mergedDescription = [
+        course.description,
+        cls.description
+      ].filter(Boolean).join(" "); // chỉ lấy phần nào có dữ liệu, nối cách nhau 1 dấu cách
+
 
       // Tạo description phong phú
       const description = `
@@ -90,9 +95,9 @@ async function syncCoursesToQdrant() {
         Lịch học: ${(cls.schedule || []).map(s => `Thứ ${s.day_of_week}, ${s.start_time}-${s.end_time} tại ${s.room}`).join("; ") || "Chưa cập nhật"}
         Số học viên hiện tại: ${cls.current_students}/${cls.max_students}
         Giáo viên: ${instructor ? instructor.full_name : "Chưa rõ"}
-        Mô tả: ${course.description || cls.description || "Không có mô tả"}
+        Mô tả: ${mergedDescription || "Không có mô tả"}
       `;
-
+//Mô tả: ${course.description || cls.description || "Không có mô tả"}
       const vector = await embedText(description);
       if (!vector.length) continue;
 
