@@ -126,7 +126,7 @@ export default function RealtimeChat({ classId, instructor }) {
 							const mine = m.senderId === profile.id;
 							return (
 								<ListGroup.Item key={m.id} className={mine ? "text-end" : ""}>
-									<div className="small text-muted">{mine ? "Bạn" : m.senderName || "Người dùng"}</div>
+									<div className="small text-muted">{mine ? "Bạn" : m.senderName || "Giảng viên"}</div>
 									<div>{m.text}</div>
 								</ListGroup.Item>
 							);

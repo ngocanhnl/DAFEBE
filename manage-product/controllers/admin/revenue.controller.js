@@ -724,7 +724,7 @@ module.exports.enrollmentStats = async (req, res) => {
     const paymentMethods = await Enrollment.distinct("payment_method");
 
     res.render("admin/pages/revenue/enrollment", {
-      pageTitle: "Thống kê theo ghi danh",
+      pageTitle: "Thống kê",
       query: req.query,
       data,
       courses,

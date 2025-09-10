@@ -9,12 +9,12 @@ const Account = require("../models/account.model");
 // ================== CONFIG ==================
 const MONGO_URI = "mongodb://localhost:27017/products-test"; // chỉnh lại DB nếu khác
 const QDRANT_API_URL =
-  "https://17287bcd-e993-4bf8-b129-b587d76d47c8.eu-central-1-0.aws.cloud.qdrant.io"; // endpoint Qdrant Cloud
+  "https://17287bcd-e993-4bf8-b129-b587d76d47c8.eu-central-1-0.aws.cloud.qdrant.io"; 
 const QDRANT_COLLECTION = "chatbot_vectors"; // tên collection trong Qdrant
 const QDRANT_API_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.LWyQxpLjxPQoQITJfMW78hirBFKsYbuvPJjZ-RNE22I"; // 🔑 thay bằng key Qdrant của bạn
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.LWyQxpLjxPQoQITJfMW78hirBFKsYbuvPJjZ-RNE22I"; 
 
-const GEMINI_API_KEY = "AIzaSyDzX5cVtr1g--VOPTBbuysgNBJAeiMiTwM"; // 🔑 thay bằng key Gemini của bạn
+const GEMINI_API_KEY = "AIzaSyDzX5cVtr1g--VOPTBbuysgNBJAeiMiTwM"; 
 
 // ================== Xóa toàn bộ dữ liệu cũ trong Qdrant ==================
 async function resetCollection() {
